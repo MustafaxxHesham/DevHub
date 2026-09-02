@@ -1,0 +1,5 @@
+<Solution>
+    <Project Path="DevHub.Api/DevHub.Api.csproj" />
+    <Project Path="DevHub.Domain/DevHub.Domain.csproj" />
+    <Project Path="DevHub.EFCore/DevHub.EFCore.csproj" />
+</Solution>

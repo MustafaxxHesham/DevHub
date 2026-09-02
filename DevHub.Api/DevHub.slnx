@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/Solution Items/">
+    <File Path="DevHub-Plan.txt" />
+  </Folder>
+  <Project Path="../Blog Platform Tickets/DevHub.Api.csproj" />
+  <Project Path="AppDomain/DevHub.Domain.csproj" Id="118ef18a-646f-41a1-bf46-ddbca9056028" />
+  <Project Path="Data.Layer.EFCore/DevHub.EFCore.csproj" Id="6468bba0-c85b-4b18-931e-a91b698dc103" />
+</Solution>
