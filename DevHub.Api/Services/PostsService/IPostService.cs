@@ -16,5 +16,9 @@ public interface IPostService
     Task<Result<IEnumerable<MinimalPost>>> GetPostsByCategoryAsync(string categoryId, int pageNumber, int pageSize);
     Task<Result<IEnumerable<MinimalPost>>> GetPostsByTagAsync(string tagId, int pageNumber, int pageSize);
     Task<Result<IPagedList<MinimalPost>>> GetPostsByCategoryAsync(string categoryId);
+    Task<Result<IEnumerable<CategoryPostsCountResponse>>> GetPostsCountByCategoryAsync();
+    Task<Result<IEnumerable<MinimalPost>>> GetPostsOrderedByViews(int pageSize, int pageNumber);
+    Task <Result<IEnumerable<TagPostsCountResponse>>> GetPostsCountByTagAsync();
+    Task<Result<IEnumerable<MinimalPost>>> GetRecommendedPostsByPostAsync(string postId);
     //    Task<bool> ValidatePost(AddPostRequest req);
 }

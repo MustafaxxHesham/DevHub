@@ -1,6 +1,8 @@
 ﻿using DevHub.Domain.DataStoreContract;
 using DevHub.Domain.Models;
 using DevHub.DTOS.Comments;
+using DevHub.Responses;
+using DevHub.Services.CommentService;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -8,7 +10,7 @@ namespace DevHub.Controllers;
 
 [ApiController]
 [Route("api/v1/comments/{postId?}")]
-public class CommentsController(IDataStore _dataStore, ILogger<CommentsController> _logger) : ControllerBase
+public class CommentsController(IDataStore _dataStore, ICommentService _commentService, ILogger<CommentsController> _logger) : ControllerBase
 {
     [HttpGet("comments")]
     public async Task<ActionResult<IEnumerable<Comment>>> GetAllMainComments([FromRoute]int postId)
@@ -31,28 +33,20 @@ public class CommentsController(IDataStore _dataStore, ILogger<CommentsControlle
         return Ok(result);
     }
 
-    [Authorize]
+    [Authorize(Policy = "Comment")]
     [HttpPost]
     public async Task<ActionResult> Comment(SubmitCommentRequest request) 
     {
         if (!await _dataStore.Posts.IsExistAsync(request.PostId))
-            return BadRequest();
+            return BadRequest("Post Not Found!");
 
-        if (request.ParentCommentId.HasValue && !await _dataStore.Comments.IsExistAsync(request.ParentCommentId.Value))
-            return BadRequest();
+        if ((request.ParentCommentId.HasValue && request.ParentCommentId > 0) && !await _dataStore.Comments.IsExistAsync(request.ParentCommentId.Value))
+            return BadRequest("No Parent Comment to nested!");
 
-        var comment = new Comment
-        {
-            Content = request.Content,
-            PostId = request.PostId,
-            ParentCommentId = request.ParentCommentId,
-            UserId = request.UserId,
-            WrittenAt = DateTime.UtcNow.ToLocalTime(),
-        };
+        var result = await _commentService.AddCommentAsync(request);
 
-        await _dataStore.Comments.AddAsync(comment);
-        await _dataStore.CompleteAsync();
-
+        if (!result.IsSuccess)
+            return BadRequest(result.Error);
 
 //            await _notificationService.NotifyAuthor(authorId);
 
@@ -63,19 +57,58 @@ public class CommentsController(IDataStore _dataStore, ILogger<CommentsControlle
     [HttpDelete("{commentId}")]
     public async Task<ActionResult> DeleteComment(int commentId)
     {
-        var result = await _dataStore.Comments.GetByIdAsync(commentId);
+        var result = await _commentService.DeleteCommentAsync(commentId);
+        if (!result.IsSuccess)
+        {
+            if (result.Error.Equals(ResponseMessages.COMMENT_NOT_FOUND))
+                return NotFound(result.Error);
 
-        if (result is null)
-            return NotFound();
-
-        _dataStore.Comments.RemoveItem(result);
-
-        await _dataStore.CompleteAsync();
-
+            BadRequest(result.Error);
+        }
         return NoContent();
+    }
 
-        _logger.LogError("Exception happened about deleting comment with Id = " +  commentId);
+    [HttpPatch]
+    public async Task<ActionResult> Edit(int commendId, string newContent)
+    {
+        if (commendId > 0)
+            return BadRequest("");
 
-        throw new Exception("Error Happended about deleting post.");
+        if (string.IsNullOrEmpty(newContent))
+            return BadRequest("");
+
+        var result = await _commentService.EditCommentAsync(newContent, commendId);
+
+        if (!result.IsSuccess)
+        {
+            if (result.Error.Equals(ResponseMessages.COMMENT_NOT_FOUND))
+            {
+                return NotFound(result.Error);
+            }
+            return BadRequest(result.Error);
+        }
+        return NoContent();
+    }
+
+    [HttpGet("countsss/{postd}")]
+    public async Task<ActionResult> GetCommentsCount(string postId)
+    {
+        var result = await _commentService.GetCommentsCount(postId);
+        if (!result.IsSuccess)
+        {
+            if (result.Error.Equals(ResponseMessages.POST_NOT_FOUND))
+            {
+                return NotFound(result.Error);
+            }
+            return BadRequest(result.Error);
+        }
+        return Ok(result.Value);
+    }
+
+    [Authorize]
+    [HttpGet("user-comments/{userId}")]
+    public IActionResult GetMyComments()
+    {
+        throw new NotImplementedException();
     }
 }

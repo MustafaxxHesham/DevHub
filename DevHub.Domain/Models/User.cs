@@ -6,7 +6,7 @@ public class User
     public string LastName { get; set; }
     public string Email { get; set; }
     public string PasswordHashed { get; set; }
-//    public string JobTitle { get; set; }
+    public string JobTitle { get; set; }
     public string ProfileImageUrl { get; set; }
     public string Bio { get; set; }
     public bool IsActive { get; set; }
@@ -16,5 +16,6 @@ public class User
     public Role Role{ get; set; }
     public ICollection<RefreshToken>? RefreshTokens { set; get; }
     public ICollection<Post>? MyPosts { get; set; }
+    public ICollection<Permission>? Permissions { get; set; }
     public ICollection<BookmarkedPost>? BookmarkedPosts { get; set; }
 }

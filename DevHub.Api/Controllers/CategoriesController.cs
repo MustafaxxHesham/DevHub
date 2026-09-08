@@ -61,22 +61,25 @@ public class CategoriesController(ICategoriesService _categoriesService) : Contr
     }
 
     [HttpPost("add-bulk")]
-    public async Task<ActionResult> AddBulk(IEnumerable<Category> categories)
+    public async Task<ActionResult> AddBulk(IEnumerable<string> categories)
     {
-        throw new NotImplementedException();
+        var result = await _categoriesService.AddBulkAsync(categories);
+        if (!result.IsSuccess)
+            return BadRequest(result.Error);
+        return Ok();
     }
 
-    /*    [HttpGet]
-        public async Task<ActionResult<int>> GetCategoryPostByCount(int categoryId)
-        {
-            var result = await _categoriesService.GetPostsCountPerCategoryAsync(categoryId);
+    [HttpDelete]
+    public async Task<ActionResult<int>> DeleteCategory(int categoryId)
+    {
+        var result = await _categoriesService.GetPostsCountPerCategoryAsync(categoryId);
 
-            if(result.IsSuccess)
-                return Ok(result.Value);
+        if(result.IsSuccess)
+            return Ok(result.Value);
 
-            if(result.Error == DbErrors.NotFoundError.ToString())
-                return NotFound();
+        if(result.Error == DbErrors.NotFoundError.ToString())
+            return NotFound();
 
-            return BadRequest(result.Error);
-        }*/
+        return BadRequest(result.Error);
+    }
 }

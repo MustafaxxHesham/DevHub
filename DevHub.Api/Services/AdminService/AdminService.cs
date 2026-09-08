@@ -6,8 +6,8 @@ using Mapster;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using DevHub.Domain.Models;
-using Mapster.Models;
-using Mapster.Utils;
+using DevHub.Responses;
+
 
 namespace DevHub.Services.AdminService;
 
@@ -35,7 +35,7 @@ public class AdminService(IDataStore _dataStore, IDataProtectionProvider _dataPr
 
     public async Task<SimpleResult<bool>> DeactivateAccountAsync(string userId)
     {
-        var realUserId = HandleUserId(userId);
+        var realUserId = handleUserId(userId);
         var user = await _dataStore.Users.GetByIdAsync(realUserId);
 
         if (user is null)
@@ -53,7 +53,7 @@ public class AdminService(IDataStore _dataStore, IDataProtectionProvider _dataPr
 
     public async Task<SimpleResult<bool>> DeleteAccountAsync(string userId)
     {
-        var realUserId = HandleUserId(userId);
+        var realUserId = handleUserId(userId);
         var user = await _dataStore.Users.GetByIdAsync(realUserId);
 
         if (user is null)
@@ -89,19 +89,66 @@ public class AdminService(IDataStore _dataStore, IDataProtectionProvider _dataPr
                                      .ToListAsync();
     }
 
-
     public async Task<int> GetUsersCount()
     {
         return await _dataStore.Users.GetCountAsync();
     }
+
     public async Task<int> GetOnlineUsersCount()
     {
         throw new NotImplementedException();
-/*return await _dataStore.Users.get
-*/    }
+    }
 
-    private int HandleUserId(string userId)
+    public async Task<Result<List<Permission>>> GetUserPermissionsList(string userId)
+    {
+        var realUserId = handleUserId(userId);
+
+        var user = await _dataStore.Users.GetByCriteriaFirstAsync(x => x.Id == realUserId, ["Permissions"]);
+        
+        if (user is null)
+            return Result<List<Permission>>.Failure(AuthResultMessages.USER_NOT_FOUND);
+
+        return Result<List<Permission>>.Success(user.Permissions!.ToList());
+    }
+
+    public async Task<SimpleResult<bool>> UpdateUserPermissionsAsync(string userId, List<int> permissionsIds)
+    {
+        var realUserId = handleUserId(userId);
+
+        if (realUserId == -1) { 
+            return SimpleResult<bool>.Failure(ResponseMessages.DATA_SENT_MANIPULATED);
+        }
+        var user = await _dataStore.Users.GetByIdAsync(realUserId);
+
+        if (user is null) {
+            return SimpleResult<bool>.Failure(ResponseMessages.USER_NOT_FOUND);
+        }
+
+        var dbPermissions = await _dataStore.Permissions.GetAllAsync();
+
+        var newPermissionsList = dbPermissions.Join(permissionsIds, x => x.Id, x => x,(x,y) => new Permission
+        {
+            Id = x.Id,
+            PermissionName = x.PermissionName
+        }).ToList();
+
+        user.Permissions = newPermissionsList;
+
+        _dataStore.Users.UpdateItem(user);
+
+        await _dataStore.CompleteAsync();
+
+        return SimpleResult<bool>.Success(true);
+    }
+
+
+    private int handleUserId(string userId)
     {
         return int.Parse(_dataProtector.Unprotect(userId));
+    }
+
+    public async Task<IEnumerable<Permission>> GetPermissionsAsync()
+    {
+        return await _dataStore.Permissions.GetAllAsync();
     }
 }

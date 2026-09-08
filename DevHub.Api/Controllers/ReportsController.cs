@@ -4,7 +4,6 @@ using DevHub.DTOS.Report;
 using DevHub.EFCore.ErrorTypes;
 using DevHub.Services.ReportingService;
 using DevHub.Utilities;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace DevHub.Controllers;
@@ -18,7 +17,7 @@ public class ReportsController(IReportService _reportService) : ControllerBase
     [PaginationValidator]
     public async Task<ActionResult<PagedResponse<ReportResponse>>> GetReportsByUser(string userId)
     {
-        if (string.IsNullOrEmpty(userId))
+        if (string.IsNullOrEmpty(userId) || userId.Equals("0"))
         {
             return BadRequest();
         }
@@ -84,8 +83,8 @@ public class ReportsController(IReportService _reportService) : ControllerBase
     [PaginationValidator]
     public async Task<ActionResult> GetReports()
     {
-        int pageSize = int.Parse(HttpContext.Request.Headers["X-PageSize"]);
-        int pageNumber = int.Parse(HttpContext.Request.Headers["X-PageNumber"]);
+        int pageSize = int.Parse(HttpContext.Request.Headers["X-PageSize"]!);
+        int pageNumber = int.Parse(HttpContext.Request.Headers["X-PageNumber"]!);
 
         var result = await _reportService.GetReportsAsync(pageSize, pageNumber);
 

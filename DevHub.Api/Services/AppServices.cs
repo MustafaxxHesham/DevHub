@@ -6,6 +6,7 @@ using DevHub.Services.EmailNotfiticationService;
 using DevHub.Services.PostsService;
 using DevHub.Services.ReportingService;
 using DevHub.Services.TokenHandlingService;
+using DevHub.Services.UsersService;
 
 namespace DevHub.Services;
 
@@ -17,6 +18,7 @@ public static class AppServices
                 .AddScoped<ICategoriesService, CategoriesService.CategoriesService>()
                 .AddScoped<IAdminService, AdminService.AdminService>()
                 .AddScoped<IAuthService, AuthService>()
+                .AddScoped<IUsersService, UsersService.UsersService>()
                 .AddScoped<IReportService, ReportService>()
                 .AddScoped<IPostService, PostService>()
                 .AddScoped<IEmailService, EmailService>()

@@ -13,6 +13,7 @@ public class AppDbContext : DbContext
     public DbSet<CourseVideo> CourseVideos { set; get; }
     public DbSet<UserFollower> Followers { get; set; }
     public DbSet<Comment> Comments { set; get; }
+    public DbSet<Permission> Permissions { set; get; }
     public DbSet<Post> Posts { set; get; }
     public DbSet<BookmarkedPost> BookmarkedPosts { set; get; }
     public DbSet<Tag> Tags { set; get; }

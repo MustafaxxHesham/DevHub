@@ -60,6 +60,15 @@ public class MinimalPostsRepository(AppDbContext _context) : BaseRepository<Mini
             .ToListAsync();
         return result;
     }
+    public async Task<IEnumerable<MinimalPost>> GetPostsOrderedByViews(int pageSize, int pageNumber)
+    {
+        var pageNumberSqlParameter = new SqlParameter("pageNumber", pageNumber);
+        var pageSizeSqlParameter = new SqlParameter("pageSize", pageSize);
+        var result = await _context.MinimalPosts
+            .FromSql($"EXEC sp_GetMinimalPostsOrderByViews {pageNumberSqlParameter}, {pageSizeSqlParameter}")
+            .ToListAsync();
+        return result;
+    }
 }
 
 //GET  http://127.0.0.1:8000/    IP Host of Python Server.

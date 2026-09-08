@@ -4,6 +4,7 @@ using Data.Layer.EFCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DevHub.EFCore.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260903172450_AddJobTitleToUsersTable")]
+    partial class AddJobTitleToUsersTable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -419,45 +422,6 @@ namespace DevHub.EFCore.Migrations
                     b.ToView(null, (string)null);
                 });
 
-            modelBuilder.Entity("DevHub.Domain.Models.Permission", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("PermissionName")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Permissions");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            PermissionName = "CREATE_POST"
-                        },
-                        new
-                        {
-                            Id = 2,
-                            PermissionName = "DELETE_POST_"
-                        },
-                        new
-                        {
-                            Id = 3,
-                            PermissionName = "EDIT_POST"
-                        },
-                        new
-                        {
-                            Id = 4,
-                            PermissionName = "VIEW_POST"
-                        });
-                });
-
             modelBuilder.Entity("DevHub.Domain.Models.Post", b =>
                 {
                     b.Property<int>("Id")
@@ -521,19 +485,6 @@ namespace DevHub.EFCore.Migrations
                         .IsUnique();
 
                     b.ToTable("Posts");
-                });
-
-            modelBuilder.Entity("DevHub.Domain.Models.PostImage", b =>
-                {
-                    b.Property<int>("PostId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("ImageUrl")
-                        .HasColumnType("nvarchar(450)");
-
-                    b.HasKey("PostId", "ImageUrl");
-
-                    b.ToTable("PostImage");
                 });
 
             modelBuilder.Entity("DevHub.Domain.Models.PostTag", b =>
@@ -1289,21 +1240,6 @@ namespace DevHub.EFCore.Migrations
                     b.ToTable("Followers");
                 });
 
-            modelBuilder.Entity("DevHub.Domain.Models.UserPermission", b =>
-                {
-                    b.Property<int>("UserId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("PermissionId")
-                        .HasColumnType("int");
-
-                    b.HasKey("UserId", "PermissionId");
-
-                    b.HasIndex("PermissionId");
-
-                    b.ToTable("UserPermission");
-                });
-
             modelBuilder.Entity("DevHub.Domain.Models.BookmarkedPost", b =>
                 {
                     b.HasOne("DevHub.Domain.Models.Post", "Post")
@@ -1398,17 +1334,6 @@ namespace DevHub.EFCore.Migrations
                     b.Navigation("Author");
 
                     b.Navigation("Category");
-                });
-
-            modelBuilder.Entity("DevHub.Domain.Models.PostImage", b =>
-                {
-                    b.HasOne("DevHub.Domain.Models.Post", "Post")
-                        .WithMany("PostImages")
-                        .HasForeignKey("PostId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Post");
                 });
 
             modelBuilder.Entity("DevHub.Domain.Models.PostTag", b =>
@@ -1519,21 +1444,6 @@ namespace DevHub.EFCore.Migrations
                     b.Navigation("FollowerUser");
                 });
 
-            modelBuilder.Entity("DevHub.Domain.Models.UserPermission", b =>
-                {
-                    b.HasOne("DevHub.Domain.Models.Permission", null)
-                        .WithMany()
-                        .HasForeignKey("PermissionId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("DevHub.Domain.Models.User", null)
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
             modelBuilder.Entity("DevHub.Domain.Models.Category", b =>
                 {
                     b.Navigation("Posts");
@@ -1554,8 +1464,6 @@ namespace DevHub.EFCore.Migrations
             modelBuilder.Entity("DevHub.Domain.Models.Post", b =>
                 {
                     b.Navigation("Comments");
-
-                    b.Navigation("PostImages");
 
                     b.Navigation("Reactions");
                 });

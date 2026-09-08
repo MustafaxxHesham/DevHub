@@ -8,7 +8,7 @@ public static class ClientSidePolicy
     {
         public CorsPolicyBuilder AddClientSidePolicy()
         {
-            return policyBuilder.WithOrigins(["https://localhost:4200"])
+            return policyBuilder.WithOrigins(["http://localhost:4200"])
                             .AllowCredentials()
                             .AllowAnyHeader()
                             .AllowAnyMethod();

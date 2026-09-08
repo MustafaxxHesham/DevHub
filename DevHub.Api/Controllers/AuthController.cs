@@ -1,6 +1,7 @@
-﻿using DevHub.Domain.Result;
-using DevHub.Domain.DataStoreContract;
+﻿using DevHub.Domain.DataStoreContract;
+using DevHub.Domain.Result;
 using DevHub.DTOS.Auth;
+using DevHub.Responses;
 using DevHub.Services.AuthenticationService;
 using DevHub.Services.EmailNotfiticationService;
 using DevHub.Services.TokenHandlingService;
@@ -11,8 +12,12 @@ using System.ComponentModel.DataAnnotations;
 namespace DevHub.Controllers;
 
 [ApiController]
-[Route("/auth")]
-public class AuthController(IAuthService _authService, ILogger<AuthController> _logger, IDataStore _dataStore, IEmailService _emailService, ITokenService _tokenService) : ControllerBase
+[Route("api/v1/auth")]
+public class AuthController(IAuthService _authService, 
+                            ILogger<AuthController> _logger, 
+                            IDataStore _dataStore, 
+                            IEmailService _emailService, 
+                            ITokenService _tokenService) : ControllerBase
 {
     [HttpPost("login")]
     public async Task<ActionResult<Result<LoginUserResponse>>> SignIn(LoginUserRequest credentials)
@@ -156,7 +161,7 @@ public class AuthController(IAuthService _authService, ILogger<AuthController> _
 
     [HttpGet("refresh-token")]
     [AllowAnonymous]
-    public async Task<ActionResult> RenewRefreshToken()
+    public async Task<ActionResult> RefreshToken()
     {
         var refreshToken = Request.Cookies["X-RefreshToken"];
 
@@ -168,43 +173,56 @@ public class AuthController(IAuthService _authService, ILogger<AuthController> _
             return Ok(result.Value);
         }
 
-        if (result.Error == AuthResultMessages.USER_NOT_FOUND)
+        if (result.Error == ResponseMessages.USER_NOT_FOUND)
             return BadRequest(result.Error);
 
         return Unauthorized(result.Error);
     }
 
 
-
-
-    //  Refresh Token <> Login generates(Access Token, Refresh Token, Profile Image, FullName)
-/*
-    [HttpPost("custom-register")]
-    public async Task<ActionResult> CustomRegister([FromBody] AddUserRequest request)
+    public record class UserExternalLogin(string firstName, string LastName, string photoUrl, string provider);
+    [HttpPost("google")]
+    public IActionResult Login(UserExternalLogin request)
     {
-        if (string.IsNullOrEmpty(request.FirstName))
-            return BadRequest();
+        throw new NotImplementedException();
+    }
 
-        var result = await _authService.SaveUserAsync(request);
-
-        var loginDto = new LoginUserRequest(request.Email, request.PasswordHashed);
-
-        var authenticateUser = await _authService.AuthenticateUserAsync(loginDto);
-
-        if (authenticateUser.IsSuccess)
-        {
-            AddTokenToCookie(authenticateUser.Value.RefreshToken);
-            return Ok(authenticateUser.Value);
-        }
-
-        return StatusCode(501);
+    [HttpGet("github")]
+    public async Task<IActionResult> Callback()
+    {
+        throw new NotImplementedException();
     }
 
 
-    [HttpGet("Check")]
-    [Authorize]
-    public ActionResult Done() => Ok(new { result = "No Problem!" });
-*/
+
+    //  Refresh Token <> Login generates(Access Token, Refresh Token, Profile Image, FullName)
+    /*
+        [HttpPost("custom-register")]
+        public async Task<ActionResult> CustomRegister([FromBody] AddUserRequest request)
+        {
+            if (string.IsNullOrEmpty(request.FirstName))
+                return BadRequest();
+
+            var result = await _authService.SaveUserAsync(request);
+
+            var loginDto = new LoginUserRequest(request.Email, request.PasswordHashed);
+
+            var authenticateUser = await _authService.AuthenticateUserAsync(loginDto);
+
+            if (authenticateUser.IsSuccess)
+            {
+                AddTokenToCookie(authenticateUser.Value.RefreshToken);
+                return Ok(authenticateUser.Value);
+            }
+
+            return StatusCode(501);
+        }
+
+
+        [HttpGet("Check")]
+        [Authorize]
+        public ActionResult Done() => Ok(new { result = "No Problem!" });
+    */
 
     private void AddTokenToCookie(string refreshToken)
     {

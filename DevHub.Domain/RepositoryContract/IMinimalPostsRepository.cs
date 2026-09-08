@@ -6,4 +6,6 @@ public interface IMinimalPostsRepository : IBaseRepository<MinimalPost, int>
     Task<IEnumerable<MinimalPost>> GetMinimalPostsByCategoryAsync(int categoryId, int pageNumber, int pageSize);
     Task<IEnumerable<MinimalPost>> GetMinimalPostsByTagAsync(int tagId, int pageNumber, int pageSize);
     Task<IEnumerable<MinimalPost>> GetMinimalPostsBookmarkedAsync(int userId, int pageNumber, int pageSize);
+    Task<IEnumerable<MinimalPost>> GetPostsOrderedByViews(int pageSize, int pageNumber);
+
 }

@@ -16,6 +16,7 @@ public interface IDataStore : IDisposable
     IBaseRepository<CourseChapter, int> CourseChapters { get; }
     IBaseRepository<CourseVideo, int> CourseVideos { get; }
     IBaseRepository<Reaction, int> Reactions { get; }
+    IBaseRepository<Permission, int> Permissions { get; }
     IBaseRepository<BookmarkedPost, int> BookmarkedPosts { get; }
     IBaseRepository<Notification, int> Notifications { get; }
     IBaseRepository<Category, int> Categories { get; }

@@ -19,6 +19,10 @@ public class UserConfigurations : IEntityTypeConfiguration<User>
             .WithOne(p => p.Author)
             .HasForeignKey(p => p.AuthorId)
             .IsRequired(false);
+
+        builder.HasMany(u => u.Permissions)
+            .WithMany(p => p.Users)
+            .UsingEntity<UserPermission>();
     }
 }
 

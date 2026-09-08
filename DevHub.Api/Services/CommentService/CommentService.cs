@@ -4,11 +4,18 @@ using DevHub.Domain.Models;
 using DevHub.Domain.Result;
 using DevHub.DTOS.Comments;
 using DevHub.EFCore.ErrorTypes;
+using DevHub.Responses;
+using DevHub.Utilities;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 
 namespace DevHub.Services.CommentService;
-public class CommentService(ICommentRepository _commentRepo, IDataStore _dataStore, ILogger<CommentService> _logger) : ICommentService
+public class CommentService(ICommentRepository _commentRepo,
+                            IDataStore _dataStore,
+                            IDataProtectionProvider provider,
+                            ILogger<CommentService> _logger) : ICommentService
 {
+    private readonly IDataProtector _dataProtector = provider.CreateProtector(ProtectionPurposes.COMMENT_ID_PURPOSE);
     public async Task<Result<Comment>> AddCommentAsync(SubmitCommentRequest request)
     {
         var comment = new Comment
@@ -54,11 +61,51 @@ public class CommentService(ICommentRepository _commentRepo, IDataStore _dataSto
     public async Task<SimpleResult<bool>> DeleteCommentAsync(int commentId)
     {
         var comment = await _commentRepo.GetByCriteriaFirstAsync(c => c.Id == commentId);
+        
         if (comment is null)
         {
+            return SimpleResult<bool>.Failure(ResponseMessages.COMMENT_NOT_FOUND);
         }
-        throw new NotImplementedException();
+        
+        _commentRepo.RemoveItem(comment);
+        
+        await _dataStore.CompleteAsync();
+
+        return SimpleResult<bool>.Success(true);
     }
+    public async Task<SimpleResult<bool>> EditCommentAsync(string newContent, int commentId)
+    {
+        var oldComment = await _commentRepo.GetByIdAsync(commentId);
+        
+        if (oldComment is null)
+        {
+            return SimpleResult<bool>.Failure(ResponseMessages.COMMENT_NOT_FOUND);
+        }
+
+        oldComment.Content = newContent;
+
+        oldComment.IsEdited = true;
+
+        _commentRepo.UpdateItem(oldComment);
+
+        await _dataStore.CompleteAsync();
+
+        return SimpleResult<bool>.Success(true);
+    }
+    public async Task<SimpleResult<int>> GetCommentsCount(string postId)
+    {
+        var realPostId = int.Parse(_dataProtector.Unprotect(postId));
+
+        if (!await _dataStore.Posts.IsExistAsync(realPostId))
+        {
+            return SimpleResult<int>.Failure(ResponseMessages.POST_NOT_FOUND);
+        }
+
+        var count = await _dataStore.Comments.GetCountWithCriteriaAsync(x => x.PostId == realPostId);
+        
+        return SimpleResult<int>.Success(count);
+    }
+
     public async Task<Result<IEnumerable<GetCommentResponse>>> GetTopCommentsAsync(int postId, int commentsCount, int count = 0)
     {
         var comments = await  _commentRepo.GetTopCommentsAsync(postId, commentsCount, count)

@@ -1,5 +1,6 @@
 ﻿using DevHub.Domain.Enums;
 using DevHub.Domain.Models;
+using System.ComponentModel.DataAnnotations;
 namespace DevHub.DTOS.Posts;
 public record class AddPostRequest
 {
@@ -9,9 +10,12 @@ public record class AddPostRequest
     public string Summary { get; set; }
     public string CategoryName { get; set; }
     public int AuthorId { get; set; }
+    [FileExtensions(Extensions = "jpg,png,jpeg")]
     public IFormFile MainImageUrl { get; set; }
     public PostStatus Status { get; set; }
     public DateTime PublishedAt { get; set; }
     public ICollection<Tag> Tags { get; set; }
+    public List<string> ImagesKey { get; set; }
+    [FileExtensions(Extensions = "jpg,png,jpeg")]
     public ICollection<IFormFile> PostImages { get; set; }
 } 

@@ -14,5 +14,6 @@ public class PostDetailsResponse
     public int CategoryId { get; set; }
     public string CategoryName { get; set; }
     public string AuthorImageUrl { get; set; }
+    public string AuthorJobTitle { get; set; }
     public DateTime? PublishedAt { get; set; }
 }

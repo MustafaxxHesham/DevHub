@@ -1,5 +1,4 @@
-﻿using DevHub.Domain.Enums;
-using DevHub.Domain.LogicContract.RepositoryContract;
+﻿using DevHub.Domain.LogicContract.RepositoryContract;
 using DevHub.Domain.Models;
 using DevHub.Domain.Result;
 using Microsoft.EntityFrameworkCore;
@@ -24,16 +23,15 @@ public class PostsRepository(AppDbContext _context) : BaseRepository<Post, int>(
     public IQueryable<Post> GetPostDetailsAsync()
     {
         
-        var query = _context.Posts
-                            .Include(p => p.Tags)
-                            .Include(p => p.Author)
-                            .Include(p => p.Comments)
-                            .AsQueryable();
+        var query = _context.Posts.Include(p => p.Tags)
+                                  .Include(p => p.Author)
+                                  .Include(p => p.Comments)
+                                  .AsQueryable();
 
         return query;
     }
 
-    public Task<Result<IQueryable<Post>>> GetPostsByCategoryAsync(string category)
+    public Task<IQueryable<Post>> GetPostsByCategoryAsync(string category)
     {
         int x = 5;
         HashSet<int> postIds = new([54, 55, 2]);
@@ -42,10 +40,27 @@ public class PostsRepository(AppDbContext _context) : BaseRepository<Post, int>(
         throw new NotImplementedException();
     }
 
-
-    public Task<Result<IQueryable<Post>>> GetPostsOrderedByViewsCountAsync(int pageSize, int pageNumber)
+    public async Task<Dictionary<string, int>> GetPostsCountByCategoryAsync()
     {
-        throw new NotImplementedException();
+        var result = await _context.Categories.GroupJoin(_context.Posts,
+            c => c.Id,
+            p => p.CategoryId,
+            (c, p) => new { CategoryName = c.Name, PostsCount = p.Count() })
+            .ToDictionaryAsync(x => x.CategoryName, x => x.PostsCount);
+
+        return result;
+    }
+
+    public async Task<Dictionary<string, int>> GetPostsCountByTagAsync()
+    {
+        var result = await _context.Tags
+            .Select(tag => new
+            {
+                TagName = tag.Name,
+                PostsCount = tag.Posts.Count()
+            })
+            .ToDictionaryAsync(x => x.TagName, x => x.PostsCount);
+        return result;
     }
 
     public Task UpdatePostAsync(Post post)

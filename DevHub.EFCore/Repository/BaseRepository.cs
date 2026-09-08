@@ -4,6 +4,7 @@ using DevHub.EFCore.EFCorePaginationHelper;
 using Microsoft.EntityFrameworkCore;
 using System.Linq.Expressions;
 using System.Runtime.InteropServices;
+
 namespace Data.Layer.EFCore.Repository;
 
 public class BaseRepository<T, K>(AppDbContext _context) : IBaseRepository<T, K> where T : class
@@ -60,7 +61,7 @@ public class BaseRepository<T, K>(AppDbContext _context) : IBaseRepository<T, K>
 
         query = query.OrderBy(orderByCriteria);
 
-        var result = await PagedList<T>.CreateAsync(query, pageSize.Value, pageNumber.Value);
+        var result = await PagedResponse<T>.CreateAsync(query, pageSize.Value, pageNumber.Value);
 
         return result;
     }
@@ -97,7 +98,7 @@ public class BaseRepository<T, K>(AppDbContext _context) : IBaseRepository<T, K>
 
         query = query.OrderBy(orderByCriteria).AsQueryable();
 
-        var result = await PagedList<T>.CreateAsync(query, pageSize, pageNumber);
+        var result = await PagedResponse<T>.CreateAsync(query, pageSize, pageNumber);
 
         return result;
     }
@@ -115,7 +116,7 @@ public class BaseRepository<T, K>(AppDbContext _context) : IBaseRepository<T, K>
             }
         }
 
-        var pagedList = await PagedList<T>.CreateAsync(query, pageSize, pageNumber);
+        var pagedList = await PagedResponse<T>.CreateAsync(query, pageSize, pageNumber);
 
         return pagedList;
     }

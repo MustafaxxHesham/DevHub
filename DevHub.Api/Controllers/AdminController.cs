@@ -1,16 +1,15 @@
 ﻿using DevHub.Services.AdminService;
 using DevHub.Domain.Models;
 using DevHub.Responses;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Mapster;
+using DevHub.Domain.DataStoreContract;
 
 namespace DevHub.Controllers;
 
 [ApiController]
 [Route("api/v1/admin")]
 
-public class AdminController(IAdminService _adminService) : ControllerBase
+public class AdminController(IAdminService _adminService, IDataStore _dataStore) : ControllerBase
 {
     [HttpGet("users-list")]
     public async Task<ActionResult<IEnumerable<UsersRequest>>> GetAccounts(int pageSize, int pageNumber)
@@ -51,7 +50,7 @@ public class AdminController(IAdminService _adminService) : ControllerBase
     {
         var result = await _adminService.DeleteAccountAsync(userId.ToString());
 
-        if (result.Error.Equals(ResponseMessages.NotFoundItem("Account")))
+        if (result.Error.Equals(ResponseMessages.USER_NOT_FOUND))
             return BadRequest();
  
         if (result.IsSuccess)
@@ -73,17 +72,23 @@ public class AdminController(IAdminService _adminService) : ControllerBase
         throw new NotImplementedException();
     }
 
-    [HttpPatch("block-user-posting")]
-    public async Task<ActionResult> BlockPosting(int userId)
+    [HttpGet("retrieve-permissions")]
+    public async Task<ActionResult<List<Permission>>> GetPermissions()
     {
-        throw new NotImplementedException();
+        return Ok(await _adminService.GetPermissionsAsync());
     }
 
-    [HttpPatch("unblock-user-posting")]
-    public async Task<ActionResult> RevertBlockPosting(int userId)
-    {
-        throw new NotImplementedException();
-    }
+    //[HttpPatch("block-user-posting")]
+    //public async Task<ActionResult> BlockPosting(int userId)
+    //{
+    //    throw new NotImplementedException();
+    //}
+
+    //[HttpPatch("unblock-user-posting")]
+    //public async Task<ActionResult> RevertBlockPosting(int userId)
+    //{
+    //    throw new NotImplementedException();
+    //}
 
     [HttpGet("tags")]
     public async Task<ActionResult<Tag>> GetTags()
@@ -91,6 +96,22 @@ public class AdminController(IAdminService _adminService) : ControllerBase
         throw new NotImplementedException();
     }
 
+    [HttpPatch("update-permissions")]
+    public async Task<ActionResult> UpdateUserPermissions(string userId, List<int> permissionsIds)
+    {
+        var result = await _adminService.UpdateUserPermissionsAsync(userId, permissionsIds);
+
+        if (!result.IsSuccess)
+        {
+            if (result.Error.Equals(ResponseMessages.USER_NOT_FOUND))
+            {
+                return NotFound(result.Error);
+            }
+            return BadRequest(result.Error);
+        }
+
+        return NoContent();
+    }
 
     // Comments Mngmnt
     /*

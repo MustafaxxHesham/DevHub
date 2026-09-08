@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace DevHub.EFCore.EFCorePaginationHelper;
 
-public class PagedList<T> : IPagedList<T>
+public class PagedResponse<T> : IPagedList<T>
 {
     public List<T> ValueList { get; private set; }
     public int CurrentPage { get; private set; }
@@ -14,14 +14,14 @@ public class PagedList<T> : IPagedList<T>
     public bool HasPrevious => CurrentPage > 1;
     public bool HasNext => CurrentPage < TotalPages;
 
-    public PagedList(List<T> values, int pageSize, int pageNumber, int count)
+    public PagedResponse(List<T> values, int pageSize, int pageNumber, int count)
     {
         CurrentPage = pageNumber;
         PageSize = pageSize;
         TotalPages = (int)Math.Ceiling(count / (double)pageSize);
         ValueList = values;
     }
-    public async static Task<PagedList<T>> CreateAsync(IQueryable<T> query, int pageSize, int pageNumber)
+    public async static Task<PagedResponse<T>> CreateAsync(IQueryable<T> query, int pageSize, int pageNumber)
     {
         var totalCount = await query.CountAsync();
 

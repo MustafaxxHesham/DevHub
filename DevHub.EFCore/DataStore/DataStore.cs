@@ -18,6 +18,7 @@ public class DataStore : IDataStore
     public IBaseRepository<UserFollower, int> Followers { get; private set; }
     public IBaseRepository<Course, int> Courses { get; private set; }
     public IBaseRepository<Report, int> Reports { get; private set; }
+    public IBaseRepository<Permission, int> Permissions { get; private set; }
     public IBaseRepository<CourseChapter, int> CourseChapters { get; private set; }
     public IBaseRepository<CourseVideo, int> CourseVideos { get; private set; }
     public IBaseRepository<Reaction, int> Reactions { get; private set; }
@@ -42,6 +43,7 @@ public class DataStore : IDataStore
         Courses = new BaseRepository<Course, int>(context);
         Reports = new BaseRepository<Report, int>(context);
         Followers = new BaseRepository<UserFollower, int>(context);
+        Permissions = new BaseRepository<Permission, int>(context);
         CourseChapters = new BaseRepository<CourseChapter, int>(context);
         CourseVideos = new BaseRepository<CourseVideo, int>(context);
     }

@@ -3,13 +3,14 @@ using DevHub.Domain.Helpers;
 using DevHub.Domain.Models;
 using DevHub.Domain.Result;
 using DevHub.DTOS.Categories;
-using DevHub.EFCore.EFCorePaginationHelper;
 using DevHub.EFCore.ErrorTypes;
+using DevHub.Responses;
 using DevHub.Utilities;
 using Microsoft.AspNetCore.DataProtection;
 using System.Runtime.InteropServices;
 namespace DevHub.Services.CategoriesService;
-public class CategoriesService(IDataStore _dataStore, IDataProtectionProvider _provider, ILogger<CategoriesService> _logger) : ICategoriesService
+public class CategoriesService(IDataStore _dataStore, IDataProtectionProvider _provider, ILogger<CategoriesService> _logger) 
+    : ICategoriesService
 {
     private readonly IDataProtector _protector = _provider.CreateProtector(ProtectionPurposes.CATEGORY_ID_PURPOSE);
     public async Task<Result<Category>> CreateAsync(string categoryName)
@@ -40,7 +41,7 @@ public class CategoriesService(IDataStore _dataStore, IDataProtectionProvider _p
         }
         else
         {
-            categoriesList = new PagedList<Category>(new List<Category>(), 5, 4, 5);
+            categoriesList = new EFCore.EFCorePaginationHelper.PagedResponse<Category>(new List<Category>(), 5, 4, 5);
 //            categoriesList = await _dataStore.Categories.GetAllAsync();
         }
 
@@ -108,9 +109,11 @@ public class CategoriesService(IDataStore _dataStore, IDataProtectionProvider _p
     public async Task<SimpleResult<bool>> IsCategoryExistAsync(string categoryName)
     {
         var count = await _dataStore.Categories.GetCountWithCriteriaAsync(c => c.Name == categoryName);
+        
         if (count > 0)
             return SimpleResult<bool>.Success(true);
-        return SimpleResult<bool>.Failure(DbErrors.NotFoundError.ToString());
+
+        return SimpleResult<bool>.Failure(ResponseMessages.CATEGORY_NOT_FOUND);
     }
 
     private async Task<string> validateCategoryNameAsync(string categoryName)
@@ -130,5 +133,16 @@ public class CategoriesService(IDataStore _dataStore, IDataProtectionProvider _p
         {
             Name = categoryName
         };
+    }
+
+    public async Task<Result<IEnumerable<Category>>> AddBulkAsync(IEnumerable<string> categoryList)
+    {
+        var categories = categoryList.Select(name => new Category { Name = name.Trim() }).ToList();
+        
+        await _dataStore.Categories.AddBulkAsync(categories);
+        
+        await _dataStore.CompleteAsync();
+
+        return Result<IEnumerable<Category>>.Success(categories);
     }
 }

@@ -4,6 +4,7 @@ using Data.Layer.EFCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DevHub.EFCore.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260904190505_AddPermissionsTable")]
+    partial class AddPermissionsTable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -434,28 +437,6 @@ namespace DevHub.EFCore.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Permissions");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            PermissionName = "CREATE_POST"
-                        },
-                        new
-                        {
-                            Id = 2,
-                            PermissionName = "DELETE_POST_"
-                        },
-                        new
-                        {
-                            Id = 3,
-                            PermissionName = "EDIT_POST"
-                        },
-                        new
-                        {
-                            Id = 4,
-                            PermissionName = "VIEW_POST"
-                        });
                 });
 
             modelBuilder.Entity("DevHub.Domain.Models.Post", b =>
@@ -521,19 +502,6 @@ namespace DevHub.EFCore.Migrations
                         .IsUnique();
 
                     b.ToTable("Posts");
-                });
-
-            modelBuilder.Entity("DevHub.Domain.Models.PostImage", b =>
-                {
-                    b.Property<int>("PostId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("ImageUrl")
-                        .HasColumnType("nvarchar(450)");
-
-                    b.HasKey("PostId", "ImageUrl");
-
-                    b.ToTable("PostImage");
                 });
 
             modelBuilder.Entity("DevHub.Domain.Models.PostTag", b =>
@@ -1400,17 +1368,6 @@ namespace DevHub.EFCore.Migrations
                     b.Navigation("Category");
                 });
 
-            modelBuilder.Entity("DevHub.Domain.Models.PostImage", b =>
-                {
-                    b.HasOne("DevHub.Domain.Models.Post", "Post")
-                        .WithMany("PostImages")
-                        .HasForeignKey("PostId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Post");
-                });
-
             modelBuilder.Entity("DevHub.Domain.Models.PostTag", b =>
                 {
                     b.HasOne("DevHub.Domain.Models.Post", null)
@@ -1554,8 +1511,6 @@ namespace DevHub.EFCore.Migrations
             modelBuilder.Entity("DevHub.Domain.Models.Post", b =>
                 {
                     b.Navigation("Comments");
-
-                    b.Navigation("PostImages");
 
                     b.Navigation("Reactions");
                 });

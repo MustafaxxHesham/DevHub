@@ -1,19 +1,15 @@
 ﻿using DevHub.Domain.DataStoreContract;
 using DevHub.Domain.Enums;
 using DevHub.Domain.Helpers;
-using DevHub.Domain.LogicContract.RepositoryContract;
 using DevHub.Domain.Models;
 using DevHub.Domain.Result;
 using DevHub.DTOS.Posts;
 using DevHub.EFCore.ErrorTypes;
 using Microsoft.AspNetCore.DataProtection;
-using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
 
 namespace DevHub.Services.PostsService;
 public class PostService(IDataStore _dataStore, 
-                         IPostRepository _postRepository,
-                         IMinimalPostsRepository _minimalPostRepository,
                          IWebHostEnvironment _env, 
                          IDataProtectionProvider provider, 
                          ILogger<PostService> _logger) : IPostService
@@ -50,18 +46,28 @@ public class PostService(IDataStore _dataStore,
     }
     public async Task<SimpleResult<int>> CreatePostAsync(AddPostRequest request)
     {
+
         var post = new Post
         {
             Slug = request.Slug,
-            Status = /*request.Status*/ PostStatus.Archived,
+            Status = request.Status,
             CategoryId = 0,
             Summary = request.Summary,
             Content = request.Content,
-            MainImageUrl = await UploadImageFileToServerAsync(File.Create("") as IFormFile),
+            MainImageUrl = await UploadImageFileToServerAsync(request.MainImageUrl, true),
             ViewsCount = 0,
             CreatedAt = DateTime.UtcNow,
-            // PostgresSQL Must have Utc (Universal Time),Now
         };
+
+        List<PostImage> postImage = new List<PostImage>();
+
+        for (int i = 0; i < request.PostImages.Count; i++)
+        {
+            postImage[i].ImageKey = request.ImagesKey[i];
+            postImage[i].ImageUrl = await UploadImageFileToServerAsync(request.PostImages.ElementAt(i), false);
+        }
+
+        post.PostImages = postImage;
 
         if (post.Status == PostStatus.Published)
             post.PublishedAt = DateTime.Now.ToLocalTime();
@@ -108,11 +114,10 @@ public class PostService(IDataStore _dataStore,
         var followersList = await _dataStore.Users.GetByIdAsync(userId);
         throw new NotImplementedException();
     }
-    public Task<Result<IEnumerable<MinimalPost>>> GetForYouPosts(int userId)
+    public async Task<Result<IEnumerable<MinimalPost>>> GetForYouPosts(int userId)
     {
         throw new NotImplementedException();
     }
-
 
     // Critical Revision
     public async Task<Result<IEnumerable<MinimalPost>>> GetPostsByCategoryAsync(string categoryId, int pageNumber, int pageSize)
@@ -124,7 +129,7 @@ public class PostService(IDataStore _dataStore,
         if (!isCategoryExist)
             return Result<IEnumerable<MinimalPost>>.Failure(DbErrors.NotFoundError.ToString() + nameof(Category));
 
-        var result = await _minimalPostRepository.GetMinimalPostsByCategoryAsync(cId, pageNumber, pageSize);
+        var result = await _dataStore.MinimalPosts.GetMinimalPostsByCategoryAsync(cId, pageNumber, pageSize);
 
         if (!result.Any())
             return Result<IEnumerable<MinimalPost>>.Failure(DbErrors.NotFoundError.ToString());
@@ -141,25 +146,13 @@ public class PostService(IDataStore _dataStore,
         if (!isCategoryExist)
             return Result<IEnumerable<MinimalPost>>.Failure(DbErrors.NotFoundError.ToString() + nameof(Tag));
 
-        var result = await _minimalPostRepository.GetMinimalPostsByTagAsync(tId, pageNumber, pageSize);
+        var result = await _dataStore.MinimalPosts.GetMinimalPostsByTagAsync(tId, pageNumber, pageSize);
 
         if (!result.Any())
             return Result<IEnumerable<MinimalPost>>.Failure(DbErrors.NotFoundError.ToString());
 
         return Result<IEnumerable<MinimalPost>>.Success(result);
     }
-    private async Task<string> UploadImageFileToServerAsync(IFormFile image)
-    {
-        string imageName = Guid.NewGuid().ToString() + Path.GetFileName(image.FileName);
-
-        string imagePath = Path.Combine(_env.WebRootPath, "Images", "PostsImages", imageName);
-
-        using (var fs = new FileStream(imagePath, FileMode.Create))
-            await image.CopyToAsync(fs);
-
-        return imagePath;
-    }
-
     public async Task<Result<IEnumerable<MinimalPost>>> GetBookmarkedPosts(int userId)
     {
         if (!await _dataStore.Users.IsExistAsync(userId))
@@ -178,7 +171,6 @@ public class PostService(IDataStore _dataStore,
 
         return Result<IEnumerable<MinimalPost>>.Success(posts);
     }
-
     public async Task<Result<IPagedList<MinimalPost>>> GetPostsByCategoryAsync(string categoryId)
     {
         int pageSize = 0, pageNumber = 0;
@@ -186,4 +178,57 @@ public class PostService(IDataStore _dataStore,
         
         throw new NotImplementedException();
     }
+    public async Task<Result<IEnumerable<CategoryPostsCountResponse>>> GetPostsCountByCategoryAsync()
+    {
+        var dict = await _dataStore.Posts.GetPostsCountByCategoryAsync();
+        
+        var values = dict.Select(item => new CategoryPostsCountResponse(item.Key, item.Value)).ToList();
+
+        return Result<IEnumerable<CategoryPostsCountResponse>>.Success(values);
+    }
+    public async Task<Result<IEnumerable<TagPostsCountResponse>>> GetPostsCountByTagAsync()
+    {
+        var dict = await _dataStore.Posts.GetPostsCountByTagAsync();
+        
+        var values = dict.Select(item => new TagPostsCountResponse(item.Key, item.Value)).ToList();
+
+        return Result<IEnumerable<TagPostsCountResponse>>.Success(values);
+    }
+    public async Task<Result<IEnumerable<MinimalPost>>> GetRecommendedPostsByPostAsync(string postId)
+    {
+        throw new NotImplementedException();
+    }
+
+    public async Task<Result<IEnumerable<MinimalPost>>> GetPostsOrderedByViews(int pageSize, int pageNumber)
+    {
+        var result = await _dataStore.MinimalPosts.GetPostsOrderedByViews(pageSize, pageNumber);
+        return Result<IEnumerable<MinimalPost>>.Success(result);
+    }
+
+
+    private async Task<string> UploadImageFileToServerAsync(IFormFile image, bool isMainImage)
+    {
+        string imageName = Guid.NewGuid().ToString() + Path.GetFileName(image.FileName);
+        string imagePath = string.Empty;
+        
+        if (isMainImage)
+            imagePath = Path.Combine(_env.WebRootPath, "Images", "PostsImages", imageName);
+        else
+            imagePath = Path.Combine(_env.WebRootPath, "Images", "PostsMainImage", imageName);
+
+
+        using (var fs = new FileStream(imagePath, FileMode.Create))
+            await image.CopyToAsync(fs);
+
+        return imagePath;
+    }
+
+    private async Task<string> injectImageUrlsInContent(string content, IFormFile file, string imageKey)
+    {
+        content = content.Replace(imageKey, await UploadImageFileToServerAsync(file, false));
+
+        return content;
+    }
+
+
 }

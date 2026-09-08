@@ -1,30 +1,41 @@
 ﻿using DevHub.Domain.DataStoreContract;
+using DevHub.Domain.Permissions;
+using DevHub.Utilities;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.DataProtection;
 using System.Security.Claims;
 namespace DevHub.API.AuthorizationRequirements;
-public class CommentPolicyHandler(IDataStore _dataStore) : AuthorizationHandler<CommentPolicyRequirement>
+public class CommentPolicyHandler(IDataStore _dataStore, IDataProtectionProvider provider) : AuthorizationHandler<CommentPolicyRequirement>
 {
+    private readonly IDataProtector _protector = provider.CreateProtector(ProtectionPurposes.USER_ID_PURPOSE);
     protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context, CommentPolicyRequirement requirement)
     {
-        // Check user has permission or not.
-        var userEmail = context.User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Email);
+        var userEmailClaim = context.User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Email);
 
-        if (userEmail == null || !await _dataStore.Users.IsEmailExistAsync(userEmail.Value)) {
-            context.Fail();
+        if (userEmailClaim == null || !await _dataStore.Users.IsEmailExistAsync(userEmailClaim.Value))
+        {
+            context.Fail(new AuthorizationFailureReason(this, "You aren't allowed to comment."));
+            return;
         }
 
+        var userIdClaims = context.User.Claims.FirstOrDefault(x => x.Type == ClaimTypes.NameIdentifier);
 
-        context.Succeed(requirement);
+        if (userIdClaims == null)
+        {
+            context.Fail();
+            return;
+        }
 
+        var realUserId = int.Parse(_protector.Unprotect(userIdClaims.Value));
 
+        var permissions = await _dataStore.Users.GetUserPermissionsAsync(realUserId);
 
+        if (permissions.Exists(x => x.PermissionName.Equals(PermissionsList.CREATE_COMMENT)))
+        {
+            context.Succeed(requirement);
+            return;
+        }
 
-        // bool x = await _dataStore.Users.HasPermissionAsync("");
-
-        // If user has permission so allow him
-
-        // prevent the user from commenting
-
-        throw new NotImplementedException();
+        context.Fail();
     }
 }

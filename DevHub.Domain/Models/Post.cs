@@ -19,7 +19,7 @@ public class Post
     public DateTime? PublishedAt { get; set; }
     public DateTime CreatedAt { get; set; }
     public ICollection<Reaction>? Reactions { get; set; }
-//    public ICollection<PostImages>? PostImages { get; set; }
+    public ICollection<PostImage>? PostImages { get; set; }
     public ICollection<Tag> Tags { get; set; }
     public ICollection<Comment>? Comments { get; set; }
 }
