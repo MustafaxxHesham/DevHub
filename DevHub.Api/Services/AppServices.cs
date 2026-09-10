@@ -2,6 +2,7 @@
 using DevHub.Services.AuthenticationService;
 using DevHub.Services.CategoriesService;
 using DevHub.Services.CommentService;
+using DevHub.Services.CoursesService;
 using DevHub.Services.EmailNotfiticationService;
 using DevHub.Services.PostsService;
 using DevHub.Services.ReportingService;
@@ -22,8 +23,9 @@ public static class AppServices
                 .AddScoped<IReportService, ReportService>()
                 .AddScoped<IPostService, PostService>()
                 .AddScoped<IEmailService, EmailService>()
+                .AddScoped<ICoursesService, CoursesService.CoursesService>()
                 .AddSingleton<ITokenService, TokenService>()
-                .AddHttpClient<PostScore>("PostScore", config =>
+                .AddHttpClient<RecommendationService.RecommendationService>("PostScore", config =>
                 {
                     config.BaseAddress = new Uri("http://127.0.0.0.12");
                 });
@@ -31,4 +33,4 @@ public static class AppServices
     }
 }
 
-public record class PostScore(int postId, int Score);
+public record class PostScore(int postId, double Score);

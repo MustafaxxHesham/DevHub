@@ -1,6 +1,7 @@
 ﻿using DevHub.Domain.LogicContract;
 using DevHub.Domain.LogicContract.RepositoryContract;
 using DevHub.Domain.Models;
+using DevHub.Domain.RepositoryContract;
 namespace DevHub.Domain.DataStoreContract;
 
 public interface IDataStore : IDisposable
@@ -10,9 +11,11 @@ public interface IDataStore : IDisposable
     IMinimalPostsRepository MinimalPosts { get; }
     ICommentRepository Comments { get; }
     IBaseRepository<RefreshToken, string> RefreshTokens { get; }
+    IBaseRepository<ExternalLogin, int> ExternalLogins { get; }
     IBaseRepository<Tag, int> Tags { get; }
     IBaseRepository<Report, int> Reports { get; }
-    IBaseRepository<Course, int> Courses { get; }
+    ICoursesRepository Courses { get; }
+    IBaseRepository<ReportAnswer, int> ReportAnswers { get; }
     IBaseRepository<CourseChapter, int> CourseChapters { get; }
     IBaseRepository<CourseVideo, int> CourseVideos { get; }
     IBaseRepository<Reaction, int> Reactions { get; }

@@ -4,6 +4,7 @@ using Data.Layer.EFCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DevHub.EFCore.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260909173827_IsViewedColumnToReportAnswersTable")]
+    partial class IsViewedColumnToReportAnswersTable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -304,9 +307,6 @@ namespace DevHub.EFCore.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<int>("CategoryId")
-                        .HasColumnType("int");
-
                     b.Property<string>("CourseImageUrl")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -318,19 +318,11 @@ namespace DevHub.EFCore.Migrations
                     b.Property<int>("InstructorId")
                         .HasColumnType("int");
 
-                    b.Property<double>("Price")
-                        .HasColumnType("float");
-
-                    b.Property<double>("Rate")
-                        .HasColumnType("float");
-
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("CategoryId");
 
                     b.HasIndex("InstructorId");
 
@@ -1399,19 +1391,11 @@ namespace DevHub.EFCore.Migrations
 
             modelBuilder.Entity("DevHub.Domain.Models.Course", b =>
                 {
-                    b.HasOne("DevHub.Domain.Models.Category", "Category")
-                        .WithMany("Courses")
-                        .HasForeignKey("CategoryId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
                     b.HasOne("DevHub.Domain.Models.User", "Instructor")
                         .WithMany()
                         .HasForeignKey("InstructorId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.Navigation("Category");
 
                     b.Navigation("Instructor");
                 });
@@ -1627,8 +1611,6 @@ namespace DevHub.EFCore.Migrations
 
             modelBuilder.Entity("DevHub.Domain.Models.Category", b =>
                 {
-                    b.Navigation("Courses");
-
                     b.Navigation("Posts");
                 });
 

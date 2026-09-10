@@ -1,30 +1,49 @@
 ﻿using DevHub.Domain.DataStoreContract;
 using DevHub.Domain.Enums;
-using DevHub.Domain.Helpers;
 using DevHub.Domain.Models;
 using DevHub.Domain.Result;
 using DevHub.DTOS.Posts;
 using DevHub.EFCore.ErrorTypes;
+using DevHub.Responses;
+using DevHub.Services.RecommendationService;
+using DevHub.Utilities;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Cryptography;
 
 namespace DevHub.Services.PostsService;
 public class PostService(IDataStore _dataStore, 
                          IWebHostEnvironment _env, 
+                         RecommendationService.RecommendationService _recommendationService,
                          IDataProtectionProvider provider, 
                          ILogger<PostService> _logger) : IPostService
 {
 
-    private readonly IDataProtector _protector = provider.CreateProtector("PostProtectId");
-    public async Task<Result<PostDetailsResponse>> GetPostInDetailAsync(int id)
+    private readonly Dictionary<string, IDataProtector> _protectors = new()
     {
-        //  Query <Mapster in IQueryable.>
+        ["userId"] = provider.CreateProtector(ProtectionPurposes.USER_ID_PURPOSE),
+        ["postId"] = provider.CreateProtector(ProtectionPurposes.POST_ID_PURPOSE),
+        ["categoryId"] = provider.CreateProtector(ProtectionPurposes.CATEGORY_ID_PURPOSE),
+        ["tagId"] = provider.CreateProtector(ProtectionPurposes.TAG_ID_PURPOSE),
+    };
+
+    public async Task<Result<PostDetailsResponse>> GetPostInDetailAsync(string id)
+    {
+        var realPostId = handlePostId(id);
+
+        if (realPostId == -1)
+        {
+            return Result<PostDetailsResponse>.Failure(ResponseMessages.DATA_SENT_MANIPULATED);
+        }
+
         PostDetailsResponse response = (await _dataStore.Posts.GetPostDetailsAsync()
-                .Where(p => p.Id == id)
+                .Where(p => p.Id == realPostId)
                 .Select(post => new PostDetailsResponse
                 {
-                    PostId = _protector.Protect(post.Id.ToString()),
+                    PostId = _protectors["postId"].Protect(post.Id.ToString()),
                     Title = post.Title,
+                    AuthorJobTitle = post.Author.JobTitle,
+                    AuthorId = _protectors["userId"].Protect(post.AuthorId.ToString()),
                     Slug = post.Slug,
                     Content = post.Content,
                     Summary = post.Summary,
@@ -40,7 +59,7 @@ public class PostService(IDataStore _dataStore,
                 }).FirstOrDefaultAsync())!;
 
         if (response is null)
-            return Result<PostDetailsResponse>.Failure("Not Found");
+            return Result<PostDetailsResponse>.Failure(ResponseMessages.POST_NOT_FOUND);
 
         return Result<PostDetailsResponse>.Success(response);
     }
@@ -49,10 +68,12 @@ public class PostService(IDataStore _dataStore,
 
         var post = new Post
         {
+            //Adding Author Id
             Slug = request.Slug,
             Status = request.Status,
             CategoryId = 0,
             Summary = request.Summary,
+            AuthorId = 1,
             Content = request.Content,
             MainImageUrl = await UploadImageFileToServerAsync(request.MainImageUrl, true),
             ViewsCount = 0,
@@ -63,14 +84,16 @@ public class PostService(IDataStore _dataStore,
 
         for (int i = 0; i < request.PostImages.Count; i++)
         {
-            postImage[i].ImageKey = request.ImagesKey[i];
             postImage[i].ImageUrl = await UploadImageFileToServerAsync(request.PostImages.ElementAt(i), false);
+            injectImageUrlsInContent(post.Content, postImage[i].ImageUrl, request.ImagesKey[i]);
         }
 
         post.PostImages = postImage;
 
         if (post.Status == PostStatus.Published)
-            post.PublishedAt = DateTime.Now.ToLocalTime();
+        {
+            post.PublishedAt = DateTime.UtcNow;
+        }
 
         await _dataStore.Posts.AddAsync(post);
 
@@ -79,13 +102,20 @@ public class PostService(IDataStore _dataStore,
         return SimpleResult<int>.Success(post.Id);
 
     }
-    public async Task<SimpleResult<bool>> DeletePostAsync(int postId)
+    public async Task<SimpleResult<bool>> DeletePostAsync(string postId)
     {
-        var post = await _dataStore.Posts.GetByIdAsync(postId);
+        var realPostId = handlePostId(postId);
+
+        if (realPostId < 0)
+        {
+            return SimpleResult<bool>.Failure(ResponseMessages.DATA_SENT_MANIPULATED);
+        }
+
+        var post = await _dataStore.Posts.GetByIdAsync(realPostId);
 
         if (post is null)
         {
-            return SimpleResult<bool>.Failure(DbErrors.NotFoundError.ToString());
+            return SimpleResult<bool>.Failure(ResponseMessages.POST_NOT_FOUND);
         }
 
         await _dataStore.Posts.DeletePostAsync(post);
@@ -102,54 +132,70 @@ public class PostService(IDataStore _dataStore,
         {
             foreach (var post in postsList)
             {
-                post.PostId = _protector.Protect(post.Id.ToString());
+                post.PostId = _protectors["postId"].Protect(post.Id.ToString());
             }
             return Result<IEnumerable<MinimalPost>>.Success(postsList);
         }
 
-        return Result<IEnumerable<MinimalPost>>.Failure(DbErrors.NotFoundError.ToString());
+        return Result<IEnumerable<MinimalPost>>.Failure(ResponseMessages.POST_NOT_FOUND);
     }    
     public async Task<Result<IEnumerable<MinimalPost>>> Feed(int userId)
     {
-        var followersList = await _dataStore.Users.GetByIdAsync(userId);
-        throw new NotImplementedException();
+        if(!await _dataStore.Users.IsExistAsync(userId))
+        {
+            return Result<IEnumerable<MinimalPost>>.Failure(ResponseMessages.USER_NOT_FOUND);
+        }
+
+        var postsIds = await _recommendationService.PostsFeedGeneral(userId);
+
+        var posts = await _dataStore.MinimalPosts.GetRecommendedPosts(postsIds);
+
+        return Result<IEnumerable<MinimalPost>>.Success(posts);
+
+
     }
     public async Task<Result<IEnumerable<MinimalPost>>> GetForYouPosts(int userId)
     {
-        throw new NotImplementedException();
-    }
+        await Task.Delay(1000);
+        PostScore[] result = [
+            new PostScore(1, 4),
+            new PostScore(2, 2),
+            new PostScore(3, 1.9),
+            new PostScore(4, 1.8)
+        ];
 
+
+        var data = await _dataStore.MinimalPosts.GetRecommendedPosts(result.Select(x => x.postId).ToArray());
+
+        return Result<IEnumerable<MinimalPost>>.Success(data);
+
+    }
     // Critical Revision
     public async Task<Result<IEnumerable<MinimalPost>>> GetPostsByCategoryAsync(string categoryId, int pageNumber, int pageSize)
     {
-        int cId = int.Parse(_protector.Unprotect(categoryId));
+        int cId = int.Parse(_protectors["categoryId"].Unprotect(categoryId));
 
         var isCategoryExist = await _dataStore.Categories.IsExistAsync(cId);
-        
+
         if (!isCategoryExist)
-            return Result<IEnumerable<MinimalPost>>.Failure(DbErrors.NotFoundError.ToString() + nameof(Category));
-
+        {
+            return Result<IEnumerable<MinimalPost>>.Failure(ResponseMessages.CATEGORY_NOT_FOUND);
+        }
         var result = await _dataStore.MinimalPosts.GetMinimalPostsByCategoryAsync(cId, pageNumber, pageSize);
-
-        if (!result.Any())
-            return Result<IEnumerable<MinimalPost>>.Failure(DbErrors.NotFoundError.ToString());
 
         return Result<IEnumerable<MinimalPost>>.Success(result);
     }
-
     public async Task<Result<IEnumerable<MinimalPost>>> GetPostsByTagAsync(string tagId, int pageNumber, int pageSize)
     {
-        int tId = int.Parse(_protector.Unprotect(tagId));
+        int tId = int.Parse(_protectors["tagId"].Unprotect(tagId));
 
-        var isCategoryExist = await _dataStore.Categories.IsExistAsync(tId);
-        
-        if (!isCategoryExist)
-            return Result<IEnumerable<MinimalPost>>.Failure(DbErrors.NotFoundError.ToString() + nameof(Tag));
+        var isTagExist = await _dataStore.Tags.IsExistAsync(tId);
 
+        if (!isTagExist)
+        {
+            return Result<IEnumerable<MinimalPost>>.Failure(ResponseMessages.TAG_NOT_FOUND);
+        }
         var result = await _dataStore.MinimalPosts.GetMinimalPostsByTagAsync(tId, pageNumber, pageSize);
-
-        if (!result.Any())
-            return Result<IEnumerable<MinimalPost>>.Failure(DbErrors.NotFoundError.ToString());
 
         return Result<IEnumerable<MinimalPost>>.Success(result);
     }
@@ -157,7 +203,7 @@ public class PostService(IDataStore _dataStore,
     {
         if (!await _dataStore.Users.IsExistAsync(userId))
         {
-            return Result<IEnumerable<MinimalPost>>.Failure(DbErrors.NotFoundError.ToString() + " User");
+            return Result<IEnumerable<MinimalPost>>.Failure(ResponseMessages.USER_NOT_FOUND);
         }
 
         var bookmarkedPosts = await _dataStore.BookmarkedPosts.GetByCriteriaAsync(bp => bp.UserId == userId, bp => bp.UserId);
@@ -171,12 +217,27 @@ public class PostService(IDataStore _dataStore,
 
         return Result<IEnumerable<MinimalPost>>.Success(posts);
     }
-    public async Task<Result<IPagedList<MinimalPost>>> GetPostsByCategoryAsync(string categoryId)
+    public async Task<Result<IEnumerable<MinimalPost>>> GetRecommendedPostsByPostAsync(string postId)
     {
-        int pageSize = 0, pageNumber = 0;
-        var result = await _dataStore.Posts.GetPaginatedByCriteriaAsync(pageSize, pageNumber, x => x.CategoryId == 1, x => x.ViewsCount); ;
-        
-        throw new NotImplementedException();
+        var realPostId = handlePostId(postId);
+
+        if (realPostId == -1)
+        {
+            return Result<IEnumerable<MinimalPost>>.Failure(ResponseMessages.DATA_SENT_MANIPULATED);
+        }
+
+        var postsScores = await _recommendationService.GetRecommendedPostsIdsForPost(realPostId);
+
+        var postsIds = postsScores.Select(x => x.postId).ToArray();
+
+        var data = await _dataStore.MinimalPosts.GetRecommendedPosts(postsIds);
+
+        return Result<IEnumerable<MinimalPost>>.Success(data);
+    }
+    public async Task<Result<IEnumerable<MinimalPost>>> GetPostsOrderedByViews(int pageSize, int pageNumber)
+    {
+        var result = await _dataStore.MinimalPosts.GetPostsOrderedByViews(pageSize, pageNumber);
+        return Result<IEnumerable<MinimalPost>>.Success(result);
     }
     public async Task<Result<IEnumerable<CategoryPostsCountResponse>>> GetPostsCountByCategoryAsync()
     {
@@ -194,17 +255,6 @@ public class PostService(IDataStore _dataStore,
 
         return Result<IEnumerable<TagPostsCountResponse>>.Success(values);
     }
-    public async Task<Result<IEnumerable<MinimalPost>>> GetRecommendedPostsByPostAsync(string postId)
-    {
-        throw new NotImplementedException();
-    }
-
-    public async Task<Result<IEnumerable<MinimalPost>>> GetPostsOrderedByViews(int pageSize, int pageNumber)
-    {
-        var result = await _dataStore.MinimalPosts.GetPostsOrderedByViews(pageSize, pageNumber);
-        return Result<IEnumerable<MinimalPost>>.Success(result);
-    }
-
 
     private async Task<string> UploadImageFileToServerAsync(IFormFile image, bool isMainImage)
     {
@@ -223,12 +273,35 @@ public class PostService(IDataStore _dataStore,
         return imagePath;
     }
 
-    private async Task<string> injectImageUrlsInContent(string content, IFormFile file, string imageKey)
+    private string injectImageUrlsInContent(string content, string newPath, string imageKey)
     {
-        content = content.Replace(imageKey, await UploadImageFileToServerAsync(file, false));
+        content = content.Replace(imageKey, newPath);
 
         return content;
     }
-
+    private int handlePostId(string id)
+    {
+        try
+        {
+            return int.Parse(_protectors["postId"].Unprotect(id));
+        }
+        catch (Exception ex)
+        {
+            if (ex is CryptographicException)
+            {
+                return -2;
+            }
+            else if (ex is FormatException)
+            {
+                return -3;
+            }
+            else if (ex is OverflowException)
+            {
+                return -4;
+            }
+            _logger.LogError(ex.Message);
+            return -1;
+        }
+    }
 
 }

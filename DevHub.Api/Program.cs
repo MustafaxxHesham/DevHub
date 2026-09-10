@@ -2,6 +2,7 @@ using DevHub.API.AuthorizationRequirements;
 using DevHub.EFCore;
 using DevHub.Middlewares;
 using DevHub.Services;
+using DevHub.Services.PostsService;
 using DevHub.Utilities;
 using Hangfire;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -89,7 +90,6 @@ if (app.Environment.IsDevelopment())
         </script>";
     });
 }
-
 
 app.UseHttpsRedirection();
 

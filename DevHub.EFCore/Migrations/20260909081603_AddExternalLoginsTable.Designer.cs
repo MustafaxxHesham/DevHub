@@ -4,6 +4,7 @@ using Data.Layer.EFCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DevHub.EFCore.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260909081603_AddExternalLoginsTable")]
+    partial class AddExternalLoginsTable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -304,9 +307,6 @@ namespace DevHub.EFCore.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<int>("CategoryId")
-                        .HasColumnType("int");
-
                     b.Property<string>("CourseImageUrl")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -318,19 +318,11 @@ namespace DevHub.EFCore.Migrations
                     b.Property<int>("InstructorId")
                         .HasColumnType("int");
 
-                    b.Property<double>("Price")
-                        .HasColumnType("float");
-
-                    b.Property<double>("Rate")
-                        .HasColumnType("float");
-
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("CategoryId");
 
                     b.HasIndex("InstructorId");
 
@@ -679,31 +671,6 @@ namespace DevHub.EFCore.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("Reports");
-                });
-
-            modelBuilder.Entity("DevHub.Domain.Models.ReportAnswer", b =>
-                {
-                    b.Property<int>("ReportId")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<bool>("IsViewed")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("ReportDetails")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("ReporterId")
-                        .HasColumnType("int");
-
-                    b.HasKey("ReportId");
-
-                    b.HasIndex("ReporterId");
-
-                    b.ToTable("ReportAnswer");
                 });
 
             modelBuilder.Entity("DevHub.Domain.Models.Role", b =>
@@ -1399,19 +1366,11 @@ namespace DevHub.EFCore.Migrations
 
             modelBuilder.Entity("DevHub.Domain.Models.Course", b =>
                 {
-                    b.HasOne("DevHub.Domain.Models.Category", "Category")
-                        .WithMany("Courses")
-                        .HasForeignKey("CategoryId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
                     b.HasOne("DevHub.Domain.Models.User", "Instructor")
                         .WithMany()
                         .HasForeignKey("InstructorId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.Navigation("Category");
 
                     b.Navigation("Instructor");
                 });
@@ -1561,25 +1520,6 @@ namespace DevHub.EFCore.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("DevHub.Domain.Models.ReportAnswer", b =>
-                {
-                    b.HasOne("DevHub.Domain.Models.Report", "Report")
-                        .WithOne("ReportAnswer")
-                        .HasForeignKey("DevHub.Domain.Models.ReportAnswer", "ReportId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("DevHub.Domain.Models.User", "Reporter")
-                        .WithMany()
-                        .HasForeignKey("ReporterId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Report");
-
-                    b.Navigation("Reporter");
-                });
-
             modelBuilder.Entity("DevHub.Domain.Models.User", b =>
                 {
                     b.HasOne("DevHub.Domain.Models.Role", "Role")
@@ -1627,8 +1567,6 @@ namespace DevHub.EFCore.Migrations
 
             modelBuilder.Entity("DevHub.Domain.Models.Category", b =>
                 {
-                    b.Navigation("Courses");
-
                     b.Navigation("Posts");
                 });
 
@@ -1651,12 +1589,6 @@ namespace DevHub.EFCore.Migrations
                     b.Navigation("PostImages");
 
                     b.Navigation("Reactions");
-                });
-
-            modelBuilder.Entity("DevHub.Domain.Models.Report", b =>
-                {
-                    b.Navigation("ReportAnswer")
-                        .IsRequired();
                 });
 
             modelBuilder.Entity("DevHub.Domain.Models.Role", b =>

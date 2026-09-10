@@ -102,4 +102,33 @@ public class UserRepository(AppDbContext _context) : BaseRepository<User, int>(_
     {
         await _context.Followers.AddAsync(userFollower);
     }
+    public async Task<Dictionary<string, int>> GetAuthRatio()
+    {
+        int totalCount = await _context.Users.CountAsync();
+        int gooleAuthCount = await _context.ExternalLogins.CountAsync(x => x.LoginKey.Equals("Google"));
+        int githubAuthCount = await _context.ExternalLogins.CountAsync(x => x.LoginKey.Equals("GitHub"));
+        Dictionary<string, int> resultRatio = new Dictionary<string, int>
+        {
+            ["Total Count"] = totalCount,
+            ["Google Auth Count"] = gooleAuthCount,
+            ["Github Auth Count"] = githubAuthCount
+        };
+        return resultRatio;
+    }
+    public async Task<IPagedList<ExternalLogin>> GetUsersGoogleAuth(int pageSize, int pageNumber)
+    {
+        var query = _context.ExternalLogins.Include(x => x.User)
+                                            .Where(x => x.Provider.Equals("Google"))
+                                            .OrderBy(x => x.UserId);
+
+        return await PagedResponse<ExternalLogin>.CreateAsync(query, pageSize, pageNumber);
+    }
+    public async Task<IPagedList<ExternalLogin>> GetUsersGitHubAuth(int pageSize, int pageNumber)
+    {
+        var query = _context.ExternalLogins.Include(x => x.User)
+                                            .Where(x => x.Provider.Equals("GitHub"))
+                                            .OrderBy(x => x.UserId);
+
+        return await PagedResponse<ExternalLogin>.CreateAsync(query, pageSize, pageNumber);
+    }
 }

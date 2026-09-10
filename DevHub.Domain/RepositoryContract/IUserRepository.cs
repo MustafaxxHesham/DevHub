@@ -15,5 +15,8 @@ public interface IUserRepository : IBaseRepository<User, int>
     Task<Tuple<User?, List<UserFollower?>, int>> GetUserProfileAsync(int id);
     Task<IPagedList<User>> GetMyFollowings(int userId, int pageSize, int pageNumber);
     Task<IPagedList<User>> GetMyFollowers(int userId, int pageSize, int pageNumber);
+    Task<IPagedList<ExternalLogin>> GetUsersGoogleAuth(int pageSize, int pageNumber);
+    Task<IPagedList<ExternalLogin>> GetUsersGitHubAuth(int pageSize, int pageNumber);
     Task FollowUserAsync(UserFollower userFollower);
+    Task<Dictionary<string, int>> GetAuthRatio();
 }

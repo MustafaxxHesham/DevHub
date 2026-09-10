@@ -2,6 +2,7 @@
 using DevHub.Domain.Models;
 using DevHub.Domain.Result;
 using Microsoft.EntityFrameworkCore;
+using System.Text;
 
 namespace Data.Layer.EFCore.Repository;
 
@@ -66,6 +67,26 @@ public class PostsRepository(AppDbContext _context) : BaseRepository<Post, int>(
     public Task UpdatePostAsync(Post post)
     {
         throw new NotImplementedException();
+    }
+
+
+    public async Task C()
+    {
+        StringBuilder stringBuilder = new StringBuilder();
+        var x = new object[] { new { k = 4, v = 54 }, new { k = 4, v = 54 } };
+        var queryBeginning = "UPDATE POSTS SET ViewsCount = CASE Id ";
+        //Ensure here that is numeric value & positive
+        foreach (var item in x)
+        {
+            stringBuilder.Append($"WHEN {item} THEN {item}");
+        }
+        stringBuilder.Append("ELSE ViewsCount");
+        stringBuilder.Append("END");
+        stringBuilder.Append(@"WHERE Id IN (
+        
+        )");
+        var finalScript = stringBuilder.ToString();
+        _context.Posts.FromSql($"{finalScript}");
     }
 
 

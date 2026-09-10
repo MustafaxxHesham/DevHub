@@ -21,5 +21,6 @@ public class ReportConfigurations : IEntityTypeConfiguration<Report>
             .WithMany()
             .HasForeignKey(x => x.ReporterId)
             .OnDelete(DeleteBehavior.Restrict);
+
     }
 }

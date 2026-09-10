@@ -69,6 +69,16 @@ public class MinimalPostsRepository(AppDbContext _context) : BaseRepository<Mini
             .ToListAsync();
         return result;
     }
+    public async Task<IEnumerable<MinimalPost>> GetRecommendedPosts(int[] postsIds)
+    {
+        var sqlParameterPostId1 = new SqlParameter("p1Id", postsIds[0]);
+        var sqlParameterPostId2 = new SqlParameter("p2Id", postsIds[1]);
+        var sqlParameterPostId3 = new SqlParameter("p3Id", postsIds[2]);
+        var sqlParameterPostId4 = new SqlParameter("p4Id", postsIds[3]);
+        var result = await _context.MinimalPosts.FromSql($@"EXEC sp_GetMinimalPostRecommended {sqlParameterPostId1} {sqlParameterPostId2} {sqlParameterPostId3} {sqlParameterPostId4}")
+            .ToListAsync();
+        return result;
+    }
 }
 
 //GET  http://127.0.0.1:8000/    IP Host of Python Server.

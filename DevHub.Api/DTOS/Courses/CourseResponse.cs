@@ -1,0 +1,2 @@
+﻿namespace DevHub.DTOS.Courses;
+public record class CourseResponse(string CourseId, string Title, string Description, string CategoryName, string CategoryId, string CourseImageUrl, double Price, string InstructorId);

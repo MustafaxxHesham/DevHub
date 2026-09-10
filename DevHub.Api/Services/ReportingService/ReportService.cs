@@ -5,6 +5,7 @@ using DevHub.Domain.Models;
 using DevHub.Domain.Result;
 using DevHub.DTOS.Report;
 using DevHub.EFCore.ErrorTypes;
+using DevHub.Responses;
 using DevHub.Utilities;
 using Microsoft.AspNetCore.DataProtection;
 using System.Security.Cryptography;
@@ -50,7 +51,7 @@ public class ReportService(IDataProtectionProvider provider, IDataStore _dataSto
     }
     public async Task<Result<PagedResponse<ReportResponse>>> GetMonthlyReportsAsync(PagedReportMonthlyRequest request)
     {
-        
+
         var reportsByMonth = await _dataStore.Reports.GetByCriteriaAsync(x => x.CreatedAt.Month == request.Month && (request.ReportType.HasValue) ? request.ReportType.Value == x.Type : true, x => x.Id, request.PageSize, request.PageNumber);
 
         if (!reportsByMonth.ValueList.Any())
@@ -127,13 +128,14 @@ public class ReportService(IDataProtectionProvider provider, IDataStore _dataSto
     public async Task<Result<PagedResponse<ReportResponse>>> GetWeeklyReportsAsync(int week, int pageSize, int pageNumber)
     {
         // needs logic to paginatiion
-        var reports = await _dataStore.Reports.GetByCriteriaAsync(x => x.CreatedAt < (DateTime.Today.AddDays(-7 * week)), x => x.Id, pageSize, pageNumber);
-        
+        var reports = await _dataStore.Reports.GetByCriteriaAsync(x => x.CreatedAt < (DateTime.Today.AddDays(-7 * week)), x => x.Id, pageSize, pageNumber,
+            ["Reporter", "User"]);
+
         if (!reports.ValueList.Any())
         {
             return Result<PagedResponse<ReportResponse>>.Failure(DbErrors.NotFoundError.ToString());
         }
-        
+
         var values = convertToReportListResponse(reports.ValueList);
 
         var response = PagedResponse<ReportResponse>.Create(values, reports.PageSize, reports.CurrentPage, reports.TotalPages);
@@ -171,6 +173,31 @@ public class ReportService(IDataProtectionProvider provider, IDataStore _dataSto
         return Result<PagedResponse<ReportResponse>>.Success(response);
 
     }
+    public async Task<Result<ReportAnswerResponse>> GetAnswerReportAsync(string reportId)
+    {
+        var realReportId = getIntId(reportId, "reportId");
+
+        if (realReportId == -1)
+        {
+            return Result<ReportAnswerResponse>.Failure(ResponseMessages.DATA_SENT_MANIPULATED);
+        }
+
+        var reportAnswer = await _dataStore.ReportAnswers.GetByIdAsync(realReportId);
+
+        if (reportAnswer == null)
+        {
+            return Result<ReportAnswerResponse>.Failure(ResponseMessages.REPORT_ANSWER_NOT_FOUND);
+        }
+
+        var reportAnswerResponse = new ReportAnswerResponse
+        (
+            AnswerDetails:reportAnswer.ReportDetails,
+            ReporterId:_protectors["userId"].Protect(reportAnswer.ReporterId.ToString()),
+            ReportId:_protectors["reportId"].Protect(reportAnswer.ReportId.ToString())
+        );
+
+        return Result<ReportAnswerResponse>.Success(reportAnswerResponse);
+    }
     public async Task<SimpleResult<bool>> DeleteReportAsync(string reportId)
     {
         var reportIdInInt = getIntId(reportId, "reportId");
@@ -207,8 +234,8 @@ public class ReportService(IDataProtectionProvider provider, IDataStore _dataSto
         {
             rId = getIntId(reportId, ProtectionPurposes.REPORT_ID_PURPOSE);
         }
-        catch (Exception ex) { 
-        
+        catch (Exception ex) {
+
         }
 
         var report = await _dataStore.Reports.GetByIdAsync(rId);
@@ -312,6 +339,51 @@ public class ReportService(IDataProtectionProvider provider, IDataStore _dataSto
         return SimpleResult<bool>.Success(true);
 
     }
+    public async Task<SimpleResult<int>> AnswerReportAsync(ReportAnswerRequest request)
+    {
+        int reporterId = getIntId(request.ReporterId, "userId");
+
+        if (reporterId == -1)
+        {
+            return SimpleResult<int>.Failure(ResponseMessages.DATA_SENT_MANIPULATED);
+        }
+        else if (await _dataStore.Users.IsExistAsync(reporterId))
+        {
+            return SimpleResult<int>.Failure(ResponseMessages.USER_NOT_FOUND);
+        }
+
+        int reportId = getIntId(request.ReportId, "reportId");
+
+        if (reporterId == -1)
+        {
+            return SimpleResult<int>.Failure(ResponseMessages.DATA_SENT_MANIPULATED);
+        }
+
+        else if (await _dataStore.Reports.IsExistAsync(reportId))
+        {
+            return SimpleResult<int>.Failure(ResponseMessages.REPORT_NOT_FOUND);
+        }
+
+        if (await _dataStore.ReportAnswers.IsExistAsync(reportId))
+        {
+            return SimpleResult<int>.Failure(ResponseMessages.ACTION_ALREADY_DONE);
+        }
+
+        var reportAnswer = new ReportAnswer
+        {
+            IsViewed = false,
+            ReportDetails = request.AnswerDetails,
+            CreatedAt = DateTime.UtcNow,
+            ReporterId = reporterId,
+            ReportId = reportId
+        };
+
+        await _dataStore.ReportAnswers.AddAsync(reportAnswer);
+        await _dataStore.CompleteAsync();
+
+        return SimpleResult<int>.Success(reportId);
+
+    }
 
 
 
@@ -336,14 +408,14 @@ public class ReportService(IDataProtectionProvider provider, IDataStore _dataSto
         foreach (var report in reports)
         {
             var reportResponse = new ReportResponse(
-                ReportId: _protectors[ProtectionPurposes.REPORT_ID_PURPOSE].Protect(report.Id.ToString()),
+                ReportId: _protectors["reportId"].Protect(report.Id.ToString()),
                 IsAdminViewed: report.IsAdminViewed,
                 CreatedAt: report.CreatedAt,
                 ReporterName: report.Reporter.FirstName + " " + report.Reporter.LastName,
                 Type: report.Type,
                 UserName: report.User.FirstName + " " + report.User.LastName,
-                ReporterId: _protectors[ProtectionPurposes.USER_ID_PURPOSE].Protect(report.ReporterId.ToString()),
-                UserId: _protectors[ProtectionPurposes.USER_ID_PURPOSE].Protect(report.UserId.ToString()),
+                ReporterId: _protectors["userId"].Protect(report.ReporterId.ToString()),
+                UserId: _protectors["userId"].Protect(report.UserId.ToString()),
                 Details: report.ReportDetails
             );
             result.Add(reportResponse);
@@ -376,5 +448,4 @@ public class ReportService(IDataProtectionProvider provider, IDataStore _dataSto
             };
         }
     }
-
 }

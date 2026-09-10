@@ -2,8 +2,10 @@
 using DevHub.Domain.Models;
 using DevHub.DTOS.Report;
 using DevHub.EFCore.ErrorTypes;
+using DevHub.Responses;
 using DevHub.Services.ReportingService;
 using DevHub.Utilities;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace DevHub.Controllers;
@@ -81,6 +83,7 @@ public class ReportsController(IReportService _reportService) : ControllerBase
 
     [HttpGet]
     [PaginationValidator]
+    [Authorize(Roles = "Admin")]
     public async Task<ActionResult> GetReports()
     {
         int pageSize = int.Parse(HttpContext.Request.Headers["X-PageSize"]!);
@@ -89,7 +92,9 @@ public class ReportsController(IReportService _reportService) : ControllerBase
         var result = await _reportService.GetReportsAsync(pageSize, pageNumber);
 
         if (!result.IsSuccess)
+        {
             return BadRequest(result.Error);
+        }
 
         return Ok(result.Value);
     }
@@ -194,7 +199,7 @@ public class ReportsController(IReportService _reportService) : ControllerBase
     [HttpGet("posts-weekly")]
     public async Task<ActionResult> GetReportsByPostsWeekly()
     {
-        throw new NotImplementedException();
+        return Ok(await _reportService.GetWeeklyReportsAsync(0, 2, 1));
     }
 
     [HttpGet("count-not-viewed")]
@@ -233,8 +238,46 @@ public class ReportsController(IReportService _reportService) : ControllerBase
     }
 
     [HttpPost("{reportId}/answer")]
-    public async Task<ActionResult> AnswerReport(string reportId)
+    [Authorize(Roles = "Admin")]
+    public async Task<ActionResult> AnswerReport(ReportAnswerRequest request)
+    {
+        var result = await _reportService.AnswerReportAsync(request);
+        if (!result.IsSuccess)
+        {
+            if (result.Error.Contains("Not found", StringComparison.OrdinalIgnoreCase))
+            {
+                return NotFound(result.Error);
+            }
+            if (result.Error.Equals(ResponseMessages.ACTION_ALREADY_DONE))
+            {
+                return Conflict("You already answered this report.");
+            }
+            return BadRequest(result.Error);
+        }
+
+        // _nofityUser(.....)
+        return Ok(result.Value);
+    }
+
+    [HttpGet("answer/{reportId}")]
+    public async Task<ActionResult> GetAnsweredReport(string reportId)
+    {
+        var result = await _reportService.GetAnswerReportAsync(reportId);
+        if (!result.IsSuccess)
+        {
+            if (result.Error.Equals(ResponseMessages.REPORT_ANSWER_NOT_FOUND))
+            {
+                return NotFound(ResponseMessages.REPORT_ANSWER_NOT_FOUND);
+            }
+            return BadRequest(result.Error);
+        }
+        return Ok(result.Value);
+    }
+
+    [HttpGet("answer/{reportId}/users/{userId}")]
+    public async Task<ActionResult> GetAnsweredReportsForUser(string userId)
     {
         throw new NotImplementedException();
     }
 }
+

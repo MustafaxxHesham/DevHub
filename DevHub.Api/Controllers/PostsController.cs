@@ -2,6 +2,7 @@
 using DevHub.Domain.Models;
 using DevHub.DTOS.Posts;
 using DevHub.EFCore.ErrorTypes;
+using DevHub.Responses;
 using DevHub.Services.PostsService;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
@@ -28,17 +29,20 @@ public class PostsController(IPostService _postService, ILogger<PostsController>
     }
 
     [HttpGet("{postId}")]
-    public async Task<ActionResult<PostDetailsResponse>> GetDetailedById(int postId)
+    public async Task<ActionResult<PostDetailsResponse>> GetDetailedById(string postId)
     {
-        if (postId <= 0)
-            return BadRequest();
-
         var result = await _postService.GetPostInDetailAsync(postId);
 
-        if (result.IsSuccess)
-            return Ok(result.Value);
+        if (!result.IsSuccess)
+        {
+            if (result.Error.Equals(ResponseMessages.POST_NOT_FOUND))
+            {
+                return NotFound(result);
+            }
+            return BadRequest(ResponseMessages.DATA_SENT_MANIPULATED);
+        }
 
-        return NotFound(result);
+        return Ok(result.Value);
     }
 
     [HttpGet("{tagId}")]
@@ -114,8 +118,6 @@ public class PostsController(IPostService _postService, ILogger<PostsController>
     [PostCategoryEnsure]
     public async Task<ActionResult> Post([FromForm] AddPostRequest request)
     {
-        request.Content = injectImageUrlsInContent(request.Content, request.ImagesKey);
-
         if (!ModelState.IsValid)
             return BadRequest(ModelState);
         //  Validate Post.
@@ -131,14 +133,20 @@ public class PostsController(IPostService _postService, ILogger<PostsController>
     }
 
     [HttpDelete("{postId}")]
-    public async Task<ActionResult> Delete(int postId)
+    public async Task<ActionResult> Delete(string postId)
     {
         var result = await _postService.DeletePostAsync(postId);
 
-        if (result.IsSuccess)
-            return NoContent();
+        if (!result.IsSuccess)
+        {
+            if (result.Error.Equals(ResponseMessages.POST_NOT_FOUND))
+            {
+                return NotFound(ResponseMessages.POST_NOT_FOUND);
+            }
+            return BadRequest(result.Error);
+        }
 
-        return BadRequest(result.Error);
+        return NoContent();
     }
 
     [HttpPatch("bookmarked")]
@@ -230,20 +238,6 @@ public class PostsController(IPostService _postService, ILogger<PostsController>
     public async Task<ActionResult> PostsByMonth()
     {
         throw new NotImplementedException();
-    }
-
-
-
-    private string injectImageUrlsInContent(string content, List<string> imagesKeys)
-    {
-        string example = @"<p>Image Paragraph</p><img src='' />";
-
-        foreach (var item in imagesKeys)
-        {
-            content = content.Replace(item, "https://.......");
-        }
-
-        return content;
     }
 }
 

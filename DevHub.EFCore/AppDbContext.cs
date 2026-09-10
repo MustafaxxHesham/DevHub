@@ -9,6 +9,7 @@ public class AppDbContext : DbContext
     public DbSet<User> Users { set; get; }
     public DbSet<Role> Roles { set; get; }
     public DbSet<Course> Courses { set; get; }
+    public DbSet<ExternalLogin> ExternalLogins { set; get; }
     public DbSet<CourseChapter> CourseChapters { set; get; }
     public DbSet<CourseVideo> CourseVideos { set; get; }
     public DbSet<UserFollower> Followers { get; set; }

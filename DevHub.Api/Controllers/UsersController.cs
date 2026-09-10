@@ -1,10 +1,15 @@
-﻿using DevHub.DTOS.Commons;
+﻿using DevHub.ActionFilters;
+using DevHub.DTOS.Commons;
 using DevHub.DTOS.Users;
 using DevHub.Responses;
 using DevHub.Services.UsersService;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 namespace DevHub.Controllers;
+
+/* UsersModule,    ReportsModule, TagsModule, CategoriesModule, CommentsModule, PostsModule [1]*/
+/* CoursesModule,  SubscriptionsModule--> AuthorizationRules, WalletModule                  [2]*/
+/* Angular Front-End Using NgRx for state management                                        [3]*/
 
 [ApiController]
 [Route("api/v1/users")]
@@ -13,10 +18,15 @@ public class UsersController(IUsersService _userService) : ControllerBase
     [HttpGet("{userId}/profile")]
     public async Task<ActionResult> GetMyProfile(string userId)
     {
-        var result = await _userService.GetMyProfile(userId);
-        return result.IsSuccess ? Ok(result.Value) : NotFound(result.Error);
-    }
+        var result = await _userService.GetMyProfileAsync(userId);
+        
+        if (!result.IsSuccess)
+        {
+            return NotFound();
+        }
 
+        return Ok(result.Value);
+    }
 
     [HttpDelete("{userId}")]
     public async Task<ActionResult> DeleteMyAccount(string userId)
@@ -24,14 +34,11 @@ public class UsersController(IUsersService _userService) : ControllerBase
         throw new NotImplementedException();
     }
 
-
-    // List And Count
     [HttpGet("{userId}/followers")]
     public async Task<ActionResult> GetUserFollowers(string userId)
     {
         throw new NotImplementedException();
     }
-
 
     [HttpGet("{userId}/followings")]
     public async Task<ActionResult> MyFollowingAuthorsCount(string userId) 
@@ -81,7 +88,6 @@ public class UsersController(IUsersService _userService) : ControllerBase
         }
         return NoContent();        
     }
-
 
     [HttpPost("follow/{userToFollowId}")]
     public async Task<ActionResult> FollowUser(string userToFollowId)
@@ -137,9 +143,27 @@ public class UsersController(IUsersService _userService) : ControllerBase
         return Ok();
     }
 
-    [HttpGet("users-logged-external")]
-    public async Task<ActionResult> F()
+    [HttpGet("users-authenticated-google")]
+    [PaginationValidator]
+    public async Task<ActionResult> GetUsersByAuthedGoogle()
     {
-        throw new NotImplementedException();
+        int pageSize = int.Parse(HttpContext.Request.Headers["X-PageSize"]!);
+        int pageNumber = int.Parse(HttpContext.Request.Headers["X-PageNumber"]!);
+        return Ok(await _userService.GetUsersListByGoogleAsync(pageSize, pageNumber));
+    }
+
+    [HttpGet("users-authenticated-github")]
+    [PaginationValidator]
+    public async Task<ActionResult> GetUsersByAuthedGitHub()
+    {
+        int pageSize = int.Parse(HttpContext.Request.Headers["X-PageSize"]!);
+        int pageNumber = int.Parse(HttpContext.Request.Headers["X-PageNumber"]!);
+        return Ok(await _userService.GetUsersListByGithubAsync(pageSize, pageNumber));
+    }
+
+    [HttpGet("users-ratio")]
+    public async Task<ActionResult> GetRatio()
+    {
+        return Ok(await _userService.GetUsersAuthRatioAsync());
     }
 }

@@ -51,7 +51,7 @@ public class BaseRepository<T, K>(AppDbContext _context) : IBaseRepository<T, K>
 
         query = query.Where(criteria);
 
-        if (includeProps.Any())
+        if (includeProps is not null && includeProps.Any())
         {
             foreach (var prop in includeProps)
             {
@@ -71,7 +71,7 @@ public class BaseRepository<T, K>(AppDbContext _context) : IBaseRepository<T, K>
 
         query = query.Where(criteria).AsQueryable();
 
-        if (includeProps.Any())
+        if (includeProps is not null && includeProps.Any())
         {
             foreach (var prop in includeProps)
             {
@@ -88,7 +88,7 @@ public class BaseRepository<T, K>(AppDbContext _context) : IBaseRepository<T, K>
     {
         var query = _context.Set<T>().AsQueryable();
 
-        if (includeProps.Any())
+        if (includeProps is not null && includeProps.Any())
         {
             foreach (var prop in includeProps)
             {
@@ -108,7 +108,7 @@ public class BaseRepository<T, K>(AppDbContext _context) : IBaseRepository<T, K>
 
         query = query.Where(criteria);
 
-        if (includeProps.Any())
+        if (includeProps is not null && includeProps.Any())
         {
             foreach (var prop in includeProps)
             {
