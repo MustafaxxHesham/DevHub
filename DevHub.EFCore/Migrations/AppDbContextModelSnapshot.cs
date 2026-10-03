@@ -17,7 +17,7 @@ namespace DevHub.EFCore.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.11")
+                .HasAnnotation("ProductVersion", "10.0.12")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -318,6 +318,9 @@ namespace DevHub.EFCore.Migrations
                     b.Property<int>("InstructorId")
                         .HasColumnType("int");
 
+                    b.Property<bool>("IsPublished")
+                        .HasColumnType("bit");
+
                     b.Property<double>("Price")
                         .HasColumnType("float");
 
@@ -344,6 +347,9 @@ namespace DevHub.EFCore.Migrations
                         .HasColumnType("int");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("ChapterNumber")
+                        .HasColumnType("int");
 
                     b.Property<int>("CourseId")
                         .HasColumnType("int");
@@ -374,7 +380,13 @@ namespace DevHub.EFCore.Migrations
                     b.Property<int?>("CourseId")
                         .HasColumnType("int");
 
-                    b.Property<string>("Duration")
+                    b.Property<DateTime>("Duration")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsPreview")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Title")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
@@ -406,6 +418,36 @@ namespace DevHub.EFCore.Migrations
                     b.HasKey("UserId", "LoginKey");
 
                     b.ToTable("ExternalLogins");
+                });
+
+            modelBuilder.Entity("DevHub.Domain.Models.Feedback", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("CourseId")
+                        .HasColumnType("int");
+
+                    b.Property<short>("Rate")
+                        .HasColumnType("smallint");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CourseId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("Feedbacks");
                 });
 
             modelBuilder.Entity("DevHub.Domain.Models.MinimalPost", b =>
@@ -737,6 +779,187 @@ namespace DevHub.EFCore.Migrations
                         {
                             Id = 3,
                             RoleName = "Admin"
+                        });
+                });
+
+            modelBuilder.Entity("DevHub.Domain.Models.SubscriptionFeature", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("DurationLimitInDays")
+                        .HasColumnType("int");
+
+                    b.Property<string>("FeatureName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("Limit")
+                        .HasColumnType("int");
+
+                    b.Property<int>("PlanId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PlanId");
+
+                    b.ToTable("SubscriptionFeatures");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            DurationLimitInDays = 15,
+                            FeatureName = "POST_PUBLISHED",
+                            Limit = 2,
+                            PlanId = 1
+                        },
+                        new
+                        {
+                            Id = 2,
+                            DurationLimitInDays = 30,
+                            FeatureName = "ACCESS_FREE_COURSES",
+                            Limit = 2,
+                            PlanId = 1
+                        },
+                        new
+                        {
+                            Id = 3,
+                            DurationLimitInDays = -1,
+                            FeatureName = "POSTS_DRAFT",
+                            Limit = 2,
+                            PlanId = 1
+                        },
+                        new
+                        {
+                            Id = 4,
+                            DurationLimitInDays = -1,
+                            FeatureName = "ACCESS_FREE_POSTS",
+                            Limit = 0,
+                            PlanId = 1
+                        },
+                        new
+                        {
+                            Id = 5,
+                            DurationLimitInDays = -1,
+                            FeatureName = "DASHBOARD_SIMPLE",
+                            Limit = 0,
+                            PlanId = 1
+                        },
+                        new
+                        {
+                            Id = 6,
+                            DurationLimitInDays = 15,
+                            FeatureName = "POST_PUBLISHED",
+                            Limit = 10,
+                            PlanId = 2
+                        },
+                        new
+                        {
+                            Id = 7,
+                            DurationLimitInDays = -1,
+                            FeatureName = "ACCESS_FREE_COURSES",
+                            Limit = 0,
+                            PlanId = 2
+                        },
+                        new
+                        {
+                            Id = 8,
+                            DurationLimitInDays = -1,
+                            FeatureName = "POSTS_DRAFT",
+                            Limit = 2,
+                            PlanId = 2
+                        },
+                        new
+                        {
+                            Id = 9,
+                            DurationLimitInDays = -1,
+                            FeatureName = "COURSES_DISCOUNT_PERCENTAGE",
+                            Limit = 10,
+                            PlanId = 2
+                        },
+                        new
+                        {
+                            Id = 10,
+                            DurationLimitInDays = -1,
+                            FeatureName = "POST_PUBLISHED",
+                            Limit = 0,
+                            PlanId = 3
+                        },
+                        new
+                        {
+                            Id = 11,
+                            DurationLimitInDays = -1,
+                            FeatureName = "ACCESS_FREE_COURSES",
+                            Limit = 0,
+                            PlanId = 3
+                        },
+                        new
+                        {
+                            Id = 12,
+                            DurationLimitInDays = -1,
+                            FeatureName = "POSTS_DRAFT",
+                            Limit = 0,
+                            PlanId = 3
+                        },
+                        new
+                        {
+                            Id = 13,
+                            DurationLimitInDays = -1,
+                            FeatureName = "COURSES_DISCOUNT_PERCENTAGE",
+                            Limit = 25,
+                            PlanId = 3
+                        });
+                });
+
+            modelBuilder.Entity("DevHub.Domain.Models.SubscriptionPlan", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("PlanMessage")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<double>("Price")
+                        .HasColumnType("float");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("SubscriptionPlans");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Name = "Free",
+                            PlanMessage = "Get started for free and explore the essentials.",
+                            Price = 0.0
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Name = "Pro",
+                            PlanMessage = "Access in-depth articles and advanced courses with Pro",
+                            Price = 10.0
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Name = "Preimum",
+                            PlanMessage = "Get the complete experience with Premium.",
+                            Price = 40.0
                         });
                 });
 
@@ -1269,6 +1492,35 @@ namespace DevHub.EFCore.Migrations
                         });
                 });
 
+            modelBuilder.Entity("DevHub.Domain.Models.Transaction", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<double>("Amount")
+                        .HasColumnType("float");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("FromUserId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ToUserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FromUserId");
+
+                    b.HasIndex("ToUserId");
+
+                    b.ToTable("Transactions");
+                });
+
             modelBuilder.Entity("DevHub.Domain.Models.User", b =>
                 {
                     b.Property<int>("Id")
@@ -1295,6 +1547,9 @@ namespace DevHub.EFCore.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
                     b.Property<bool>("IsEmailVerified")
                         .HasColumnType("bit");
 
@@ -1316,6 +1571,9 @@ namespace DevHub.EFCore.Migrations
 
                     b.Property<int>("RoleId")
                         .HasColumnType("int");
+
+                    b.Property<Guid?>("Wallet")
+                        .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
 
@@ -1355,6 +1613,62 @@ namespace DevHub.EFCore.Migrations
                     b.HasIndex("PermissionId");
 
                     b.ToTable("UserPermission");
+                });
+
+            modelBuilder.Entity("DevHub.Domain.Models.UserSubscription", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("AutoSubscribe")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("BillingCycle")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("EndDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("StartDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("SubscriptionPlanId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SubscriptionPlanId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("UserSubscriptions");
+                });
+
+            modelBuilder.Entity("DevHub.Domain.Models.Wallet", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<double>("Balance")
+                        .HasColumnType("float");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId")
+                        .IsUnique();
+
+                    b.ToTable("Wallets");
                 });
 
             modelBuilder.Entity("DevHub.Domain.Models.BookmarkedPost", b =>
@@ -1451,6 +1765,25 @@ namespace DevHub.EFCore.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("DevHub.Domain.Models.Feedback", b =>
+                {
+                    b.HasOne("DevHub.Domain.Models.Course", "Course")
+                        .WithMany("Feedbacks")
+                        .HasForeignKey("CourseId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("DevHub.Domain.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Course");
 
                     b.Navigation("User");
                 });
@@ -1580,6 +1913,36 @@ namespace DevHub.EFCore.Migrations
                     b.Navigation("Reporter");
                 });
 
+            modelBuilder.Entity("DevHub.Domain.Models.SubscriptionFeature", b =>
+                {
+                    b.HasOne("DevHub.Domain.Models.SubscriptionPlan", "Plan")
+                        .WithMany("SubscriptionFeatures")
+                        .HasForeignKey("PlanId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Plan");
+                });
+
+            modelBuilder.Entity("DevHub.Domain.Models.Transaction", b =>
+                {
+                    b.HasOne("DevHub.Domain.Models.User", "FromUser")
+                        .WithMany()
+                        .HasForeignKey("FromUserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("DevHub.Domain.Models.User", "ToUser")
+                        .WithMany()
+                        .HasForeignKey("ToUserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("FromUser");
+
+                    b.Navigation("ToUser");
+                });
+
             modelBuilder.Entity("DevHub.Domain.Models.User", b =>
                 {
                     b.HasOne("DevHub.Domain.Models.Role", "Role")
@@ -1625,6 +1988,36 @@ namespace DevHub.EFCore.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("DevHub.Domain.Models.UserSubscription", b =>
+                {
+                    b.HasOne("DevHub.Domain.Models.SubscriptionPlan", "SubscriptionPlan")
+                        .WithMany()
+                        .HasForeignKey("SubscriptionPlanId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("DevHub.Domain.Models.User", "User")
+                        .WithMany("UserSubscriptions")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("SubscriptionPlan");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("DevHub.Domain.Models.Wallet", b =>
+                {
+                    b.HasOne("DevHub.Domain.Models.User", "User")
+                        .WithOne("WalletId")
+                        .HasForeignKey("DevHub.Domain.Models.Wallet", "UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("DevHub.Domain.Models.Category", b =>
                 {
                     b.Navigation("Courses");
@@ -1637,6 +2030,8 @@ namespace DevHub.EFCore.Migrations
                     b.Navigation("CourseChapters");
 
                     b.Navigation("CourseVideos");
+
+                    b.Navigation("Feedbacks");
                 });
 
             modelBuilder.Entity("DevHub.Domain.Models.CourseChapter", b =>
@@ -1664,6 +2059,11 @@ namespace DevHub.EFCore.Migrations
                     b.Navigation("Users");
                 });
 
+            modelBuilder.Entity("DevHub.Domain.Models.SubscriptionPlan", b =>
+                {
+                    b.Navigation("SubscriptionFeatures");
+                });
+
             modelBuilder.Entity("DevHub.Domain.Models.User", b =>
                 {
                     b.Navigation("BookmarkedPosts");
@@ -1671,6 +2071,10 @@ namespace DevHub.EFCore.Migrations
                     b.Navigation("MyPosts");
 
                     b.Navigation("RefreshTokens");
+
+                    b.Navigation("UserSubscriptions");
+
+                    b.Navigation("WalletId");
                 });
 #pragma warning restore 612, 618
         }

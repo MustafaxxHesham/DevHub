@@ -1,6 +1,7 @@
-﻿using DevHub.Domain.Enums;
+﻿using DevHub.Domain.Base;
+using DevHub.Domain.Enums;
 namespace DevHub.Domain.Models;
-public class Post
+public class Post : ISoftDeletable
 {
     public int Id { get; set; }
     public string Title { get; set; }
@@ -9,7 +10,6 @@ public class Post
     public string Summary { get; set; }
     public string MainImageUrl { get; set; }
     public int ViewsCount { get; set; }
-    public bool IsDeleted { get; set; } = false;
     public int CategoryId { get; set; }
     public Category Category { get; set; }
     public int AuthorId { get; set; }
@@ -22,4 +22,5 @@ public class Post
     public ICollection<PostImage>? PostImages { get; set; }
     public ICollection<Tag> Tags { get; set; }
     public ICollection<Comment>? Comments { get; set; }
+    public bool IsDeleted { get; set; } = false;
 }

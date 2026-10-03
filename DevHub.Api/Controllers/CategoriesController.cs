@@ -21,7 +21,9 @@ public class CategoriesController(ICategoriesService _categoriesService) : Contr
         var result = await _categoriesService.GetCategoriesAsync(query);
 
         if (result.IsSuccess)
+        {
             return Ok(result.Value);
+        }
 
         return NotFound();
     }
@@ -40,7 +42,9 @@ public class CategoriesController(ICategoriesService _categoriesService) : Contr
         var result = await _categoriesService.CreateAsync(categoryName);
 
         if (result.IsSuccess)
+        {
             return CreatedAtAction(nameof(GetCategoryById), new { categoryId = result.Value.Id }, result.Value);
+        }
 
         return BadRequest(result.Error);
     }
@@ -51,10 +55,14 @@ public class CategoriesController(ICategoriesService _categoriesService) : Contr
         var result = await _categoriesService.EditCategoryAsync(request);
 
         if (result.IsSuccess)
+        {
             return NoContent();
+        }
 
         if (result.Error == DbErrors.NotFoundError.ToString())
+        {
             return NotFound();
+        }
 
         return BadRequest(result.Error);
 
@@ -64,8 +72,12 @@ public class CategoriesController(ICategoriesService _categoriesService) : Contr
     public async Task<ActionResult> AddBulk(IEnumerable<string> categories)
     {
         var result = await _categoriesService.AddBulkAsync(categories);
+        
         if (!result.IsSuccess)
+        {
             return BadRequest(result.Error);
+        }
+
         return Ok();
     }
 

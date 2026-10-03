@@ -4,7 +4,7 @@ using DevHub.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using System.Security.Claims;
-namespace DevHub.API.AuthorizationRequirements;
+namespace DevHub.AuthorizationRequirements.CommentPolicy;
 public class CommentPolicyHandler(IDataStore _dataStore, IDataProtectionProvider provider) : AuthorizationHandler<CommentPolicyRequirement>
 {
     private readonly IDataProtector _protector = provider.CreateProtector(ProtectionPurposes.USER_ID_PURPOSE);

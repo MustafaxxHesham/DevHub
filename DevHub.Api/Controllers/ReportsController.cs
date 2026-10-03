@@ -27,7 +27,7 @@ public class ReportsController(IReportService _reportService) : ControllerBase
 
         int pageNumber = int.Parse(HttpContext.Request.Headers["X-PageNumber"]!);
 
-        var pagedRequestResult = PagedRequest.PagedRequestFactory(userId, pageSize, pageNumber);
+        var pagedRequestResult = KeyPagedRequest<string>.PagedRequestCreate(userId, pageSize, pageNumber);
 
         var result = await _reportService.GetReportsByUserAsync(pagedRequestResult);
 
@@ -138,14 +138,12 @@ public class ReportsController(IReportService _reportService) : ControllerBase
 
         int pageNumber = int.Parse(HttpContext.Request.Headers["X-PageNumber"]!);
 
-        var result = await _reportService.GetWeeklyReportsAsync(weekNum, pageSize, pageNumber);
+        var keyPagedRequest = KeyPagedRequest<int>.PagedRequestCreate(weekNum, pageSize, pageNumber);
+
+        var result = await _reportService.GetWeeklyReportsAsync(keyPagedRequest);
 
         if (!result.IsSuccess)
         {
-            if (result.Error.Equals(DbErrors.NotFoundError.ToString()))
-            {
-                return NotFound();
-            }
             return BadRequest(result.Error);
         }
 
@@ -196,10 +194,23 @@ public class ReportsController(IReportService _reportService) : ControllerBase
         return Ok(result.Value);
     }
 
-    [HttpGet("posts-weekly")]
-    public async Task<ActionResult> GetReportsByPostsWeekly()
+    [HttpGet("posts-weekly/{weekCount}")]
+    [PaginationValidator]
+    public async Task<ActionResult> GetReportsByPostsWeekly(int weekCount)
     {
-        return Ok(await _reportService.GetWeeklyReportsAsync(0, 2, 1));
+        if (weekCount <= 0)
+        {
+            return BadRequest();
+        }
+        int pageSize = int.Parse(HttpContext.Request.Headers["X-PageSize"]!);
+        
+        int pageNumber = int.Parse(HttpContext.Request.Headers["X-PageNumber"]!);
+
+        var keyPagedRequest = KeyPagedRequest<int>.PagedRequestCreate(weekCount, pageSize, pageNumber);
+
+        var result = await _reportService.GetWeeklyReportsAsync(keyPagedRequest);
+
+        return Ok(result);
     }
 
     [HttpGet("count-not-viewed")]

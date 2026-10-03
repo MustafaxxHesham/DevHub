@@ -10,43 +10,90 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 
 namespace DevHub.Services.CommentService;
+
+enum Keys
+{
+    UserId,
+    PostId,
+    CommentId
+}
+
 public class CommentService(ICommentRepository _commentRepo,
                             IDataStore _dataStore,
                             IDataProtectionProvider provider,
                             ILogger<CommentService> _logger) : ICommentService
 {
-    private readonly IDataProtector _dataProtector = provider.CreateProtector(ProtectionPurposes.COMMENT_ID_PURPOSE);
+    private readonly Dictionary<string, IDataProtector> _protectors = new()
+    {
+        [Keys.CommentId.ToString()] = provider.CreateProtector(ProtectionPurposes.COMMENT_ID_PURPOSE),
+        [Keys.PostId.ToString()] = provider.CreateProtector(ProtectionPurposes.POST_ID_PURPOSE),
+        [Keys.UserId.ToString()] = provider.CreateProtector(ProtectionPurposes.USER_ID_PURPOSE)
+    };
     public async Task<Result<Comment>> AddCommentAsync(SubmitCommentRequest request)
     {
-        var comment = new Comment
+        int realPostId = getRealInt(request.PostId, Keys.PostId);
+
+        if (realPostId == -1)
         {
-            Content = request.Content,
-            PostId = request.PostId,
-            UserId = request.UserId,
-        };
+            return Result<Comment>.Failure(ResponseMessages.POST_NOT_FOUND);
+        }
 
-        await _commentRepo.AddAsync(comment);
+        int realUserId = getRealInt(request.UserId, Keys.UserId);
 
-        if (await _dataStore.CompleteAsync() > 0)
-            return Result<Comment>.Success(comment);
-
-        return Result<Comment>.Failure(DbErrors.InsertingError.ToString());
-
-    }
-    public async Task<Result<Comment>> AddReplyToCommentAsync(SubmitCommentRequest request)
-    {
-        var parentComment = await _commentRepo.GetByIdAsync(request.ParentCommentId!.Value);
-
-        if (parentComment == null) {
-            return Result<Comment>.Failure(DbErrors.NotFoundError.ToString());
+        if (realUserId == -1)
+        {
+            return Result<Comment>.Failure(ResponseMessages.USER_NOT_FOUND);
         }
 
         var comment = new Comment
         {
             Content = request.Content,
-            ParentCommentId = request.ParentCommentId,
-            PostId = request.PostId,
-            UserId = request.UserId,
+            PostId = realPostId,
+            UserId = realUserId,
+        };
+
+        await _commentRepo.AddAsync(comment);
+
+        await _dataStore.CompleteAsync();
+        
+        return Result<Comment>.Success(comment);
+    }
+    public async Task<Result<Comment>> AddReplyToCommentAsync(SubmitCommentRequest request)
+    {
+        var realParentCommentId = getRealInt(request.ParentCommentId!, Keys.CommentId);
+
+        if (realParentCommentId == -1 || !await _dataStore.Comments.IsExistAsync(realParentCommentId))
+        {
+            return Result<Comment>.Failure(ResponseMessages.COMMENT_NOT_FOUND);
+        }
+
+        var parentComment = await _commentRepo.GetByIdAsync(realParentCommentId);
+
+        if (parentComment == null) {
+            return Result<Comment>.Failure(ResponseMessages.COMMENT_NOT_FOUND);
+        }
+
+        int realPostId = getRealInt(request.PostId, Keys.PostId);
+
+        if (realPostId == -1 || !await _dataStore.Posts.IsExistAsync(realPostId))
+        {
+            return Result<Comment>.Failure(ResponseMessages.POST_NOT_FOUND);
+        }
+
+
+        int realUserId = getRealInt(request.UserId, Keys.UserId);
+
+        if (realUserId == -1 || !await _dataStore.Users.IsExistAsync(realUserId))
+        {
+            return Result<Comment>.Failure(ResponseMessages.USER_NOT_FOUND);
+        }
+
+        var comment = new Comment
+        {
+            Content = request.Content,
+            ParentCommentId = realParentCommentId,
+            PostId = realPostId,
+            UserId = realUserId,
             WrittenAt = DateTime.UtcNow
         };
 
@@ -94,9 +141,9 @@ public class CommentService(ICommentRepository _commentRepo,
     }
     public async Task<SimpleResult<int>> GetCommentsCount(string postId)
     {
-        var realPostId = int.Parse(_dataProtector.Unprotect(postId));
+        var realPostId = getRealInt(postId, Keys.PostId);
 
-        if (!await _dataStore.Posts.IsExistAsync(realPostId))
+        if (realPostId == -1 || !await _dataStore.Posts.IsExistAsync(realPostId))
         {
             return SimpleResult<int>.Failure(ResponseMessages.POST_NOT_FOUND);
         }
@@ -105,10 +152,10 @@ public class CommentService(ICommentRepository _commentRepo,
         
         return SimpleResult<int>.Success(count);
     }
-
-    public async Task<Result<IEnumerable<GetCommentResponse>>> GetTopCommentsAsync(int postId, int commentsCount, int count = 0)
+    public async Task<Result<IEnumerable<GetCommentResponse>>> GetTopCommentsAsync(KeyPagedRequest<int> request)
     {
-        var comments = await  _commentRepo.GetTopCommentsAsync(postId, commentsCount, count)
+        //To be Revisioned!!!
+        var comments = await  _commentRepo.GetTopCommentsAsync(request.Key, request.PageSize, 0)
             .GroupBy(c => c.ParentCommentId, (k, v) => new
             {
                 Key = k.GetValueOrDefault(0),
@@ -125,5 +172,19 @@ public class CommentService(ICommentRepository _commentRepo,
             .ToListAsync();
 
         return Result<IEnumerable<GetCommentResponse>>.Success(comments);
+    }
+
+
+    private int getRealInt(string protectedId, Keys key)
+    {
+        try
+        {
+            return int.Parse(_protectors[key.ToString()].Unprotect(protectedId));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError($"Error Around Id Of {key.ToString()} With Value {protectedId}");
+            return -1;
+        }
     }
 }

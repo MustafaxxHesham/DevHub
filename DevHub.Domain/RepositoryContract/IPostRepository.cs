@@ -1,4 +1,5 @@
-﻿using DevHub.Domain.Models;
+﻿using DevHub.Domain.Helpers;
+using DevHub.Domain.Models;
 namespace DevHub.Domain.LogicContract.RepositoryContract;
 
 public interface IPostRepository : IBaseRepository<Post, int>
@@ -8,4 +9,6 @@ public interface IPostRepository : IBaseRepository<Post, int>
     Task UpdatePostAsync(Post post);
     Task<Dictionary<string, int>> GetPostsCountByCategoryAsync();
     Task<Dictionary<string, int>> GetPostsCountByTagAsync();
+    Task<DateTime> GetLastPostDateForUserAsync(int userId);
+    Task<IPagedList<Post>> GetAsync();
 }

@@ -207,9 +207,9 @@ public class UsersService(IDataStore _dataStore, IDataProtectionProvider provide
         return Result<UserRatioCountResponse>.Success(values);
     }
 
-    public async Task<PagedResponse<UserResultResponse>> SearchUsersAsync(PagedSearchRequest request)
+    public async Task<PagedResponse<UserResultResponse>> SearchUsersAsync(KeyPagedRequest<string> request)
     {
-        var data = await _dataStore.Users.SearchUsersAsync(request.searchKey, request.pageSize, request.pageNumber);
+        var data = await _dataStore.Users.SearchUsersAsync(request.Key, request.PageSize, request.PageNumber);
 
         var valueList = convertUserToUserResult(data.ValueList);
 
@@ -218,9 +218,9 @@ public class UsersService(IDataStore _dataStore, IDataProtectionProvider provide
         return response;
     }
 
-    public async Task<Result<PagedResponse<UserResultResponse>>> GetUserFollowingsAsync(string userId, int pageSize, int pageNumber)
+    public async Task<Result<PagedResponse<UserResultResponse>>> GetUserFollowingsAsync(KeyPagedRequest<string> request)
     {
-        var realUserId = getUserIdInt(userId);
+        var realUserId = getUserIdInt(request.Key);
         
         if (realUserId == -1)
         {
@@ -232,7 +232,7 @@ public class UsersService(IDataStore _dataStore, IDataProtectionProvider provide
             return Result<PagedResponse<UserResultResponse>>.Failure(ResponseMessages.USER_NOT_FOUND);
         }
 
-        var data = await _dataStore.Users.GetMyFollowings(realUserId, pageSize, pageNumber);
+        var data = await _dataStore.Users.GetMyFollowings(realUserId, request.PageSize, request.PageNumber);
 
         var values = PagedResponse<UserResultResponse>.Create(convertUserToUserResult(data.ValueList), data.PageSize, data.CurrentPage, data.TotalCount);
 
@@ -240,9 +240,9 @@ public class UsersService(IDataStore _dataStore, IDataProtectionProvider provide
 
     }
 
-    public async Task<Result<PagedResponse<UserResultResponse>>> GetUserFollowersAsync(string userId, int pageSize, int pageNumber)
+    public async Task<Result<PagedResponse<UserResultResponse>>> GetUserFollowersAsync(KeyPagedRequest<string> request)
     {
-        var realUserId = getUserIdInt(userId);
+        var realUserId = getUserIdInt(request.Key);
         
         if (realUserId == -1)
         {
@@ -254,7 +254,7 @@ public class UsersService(IDataStore _dataStore, IDataProtectionProvider provide
             return Result<PagedResponse<UserResultResponse>>.Failure(ResponseMessages.USER_NOT_FOUND);
         }
 
-        var data = await _dataStore.Users.GetMyFollowers(realUserId, pageSize, pageNumber);
+        var data = await _dataStore.Users.GetMyFollowers(realUserId, request.PageSize, request.PageNumber);
 
         var values = PagedResponse<UserResultResponse>.Create(convertUserToUserResult(data.ValueList), data.PageSize, data.CurrentPage, data.TotalCount);
 
@@ -313,7 +313,7 @@ public class UsersService(IDataStore _dataStore, IDataProtectionProvider provide
         return PagedResponse<UserResultResponse>.Create(userResponseList, externalLoginsList.PageSize, externalLoginsList.CurrentPage, externalLoginsList.TotalPages);
     }
 
-    public async Task<Dictionary<string, int>> GetUsersAuthRatioAsync()
+    public async Task<Dictionary<string, double>> GetUsersAuthRatioAsync()
     {
         return await _dataStore.Users.GetAuthRatio();
     }

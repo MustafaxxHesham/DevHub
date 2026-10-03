@@ -5,6 +5,7 @@ using DevHub.Responses;
 using DevHub.Services.AuthenticationService;
 using DevHub.Services.EmailNotfiticationService;
 using DevHub.Services.TokenHandlingService;
+using Hangfire;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.ComponentModel.DataAnnotations;
@@ -13,18 +14,12 @@ namespace DevHub.Controllers;
 
 [ApiController]
 [Route("api/v1/auth")]
-public class AuthController(IAuthService _authService, 
-                            ILogger<AuthController> _logger, 
-                            IDataStore _dataStore, 
-                            IEmailService _emailService, 
-                            ITokenService _tokenService) : ControllerBase
+public class AuthController(IAuthService _authService, ILogger<AuthController> _logger, 
+                            IDataStore _dataStore, ITokenService _tokenService) : ControllerBase
 {
     [HttpPost("login")]
     public async Task<ActionResult<Result<LoginUserResponse>>> SignIn(LoginUserRequest credentials)
     {
-        if (!ModelState.IsValid)
-            return BadRequest(ModelState);
-
         var result = await _authService.AuthenticateUserAsync(credentials);
 
         if (result.IsSuccess)
@@ -42,7 +37,7 @@ public class AuthController(IAuthService _authService,
         if (!ModelState.IsValid)
             return BadRequest(ModelState);
 
-        var result = await _authService.SaveUserAsync(userDataRequest);
+        var result = await _authService.CreateUserAsync(userDataRequest);
 
         if (!result.IsSuccess)
             return BadRequest(result.Error);
@@ -51,7 +46,7 @@ public class AuthController(IAuthService _authService,
 
         var vToken = new UserVerificationToken(userDataRequest.Email, token);
 
-        await _emailService.SendEmailVerificationMailAsync(vToken);
+        BackgroundJob.Enqueue<IEmailService>(service => service.SendEmailVerificationMailAsync(vToken));
 
         return Ok();
     }
@@ -111,8 +106,10 @@ public class AuthController(IAuthService _authService,
     {
         var result = await _authService.IsEmailVerifiedAsync(email);
 
-        if (!result.IsSuccess && (result.Error.Equals("Email isn't existed.") || result.Error.Equals("Email is already verified.")))
+        if (!result.IsSuccess)
+        {
             return BadRequest(result.Error);
+        }
 
         var token = _tokenService.GetToken(email);
 
@@ -122,7 +119,7 @@ public class AuthController(IAuthService _authService,
 
         var userVerificationToken = new UserVerificationToken(email, url!);
 
-        await _emailService.SendEmailVerificationMailAsync(userVerificationToken);
+        BackgroundJob.Enqueue<IEmailService>(service => service.SendEmailVerificationMailAsync(userVerificationToken));
 
         return Ok(url);
     }
@@ -154,7 +151,7 @@ public class AuthController(IAuthService _authService,
 
         var verificationToken = new UserVerificationToken(email, token);
 
-        await _emailService.SendEmailForgotPasswordCodeAsync(verificationToken);
+        BackgroundJob.Enqueue<IEmailService>(service => service.SendEmailForgotPasswordCodeAsync(verificationToken));
 
         return Ok();
     }
@@ -180,19 +177,12 @@ public class AuthController(IAuthService _authService,
     }
 
 
-    public record class UserExternalLogin(string firstName, string LastName, string photoUrl, string provider);
-    [HttpPost("google")]
-    public IActionResult Login(UserExternalLogin request)
-    {
-        throw new NotImplementedException();
-    }
 
-    [HttpGet("github")]
-    public async Task<IActionResult> Callback()
-    {
-        throw new NotImplementedException();
-    }
-
+    //[HttpPost("google")]
+    //public IActionResult ExternalLogin(UserExternalLogin request)
+    //{
+    //    throw new NotImplementedException();
+    //}
 
 
     //  Refresh Token <> Login generates(Access Token, Refresh Token, Profile Image, FullName)

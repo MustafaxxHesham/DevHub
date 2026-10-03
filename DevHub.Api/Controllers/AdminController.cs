@@ -3,12 +3,14 @@ using DevHub.Domain.Models;
 using DevHub.Responses;
 using Microsoft.AspNetCore.Mvc;
 using DevHub.Domain.DataStoreContract;
+using DevHub.Utilities;
+using Microsoft.AspNetCore.Authorization;
 
 namespace DevHub.Controllers;
 
 [ApiController]
 [Route("api/v1/admin")]
-
+[Authorize(Roles = "Admin")]
 public class AdminController(IAdminService _adminService, IDataStore _dataStore) : ControllerBase
 {
     [HttpGet("users-list")]
@@ -63,7 +65,8 @@ public class AdminController(IAdminService _adminService, IDataStore _dataStore)
     [HttpGet("users-by-role/{roleId}")]
     public async Task<ActionResult<IEnumerable<UsersRequest>>> GetUsersByRole(int roleId, int pageSize, int pageNumber)
     {
-        return Ok(await _adminService.GetAccountsRoleBasedAsync(roleId, pageSize, pageNumber));
+        var pagedRequest = KeyPagedRequest<int>.PagedRequestCreate(roleId, pageSize, pageNumber);
+        return Ok(await _adminService.GetAccountsRoleBasedAsync(pagedRequest));
     }
 
     [HttpPatch("blocking-user-commenting")]
@@ -78,17 +81,13 @@ public class AdminController(IAdminService _adminService, IDataStore _dataStore)
         return Ok(await _adminService.GetPermissionsAsync());
     }
 
-    //[HttpPatch("block-user-posting")]
-    //public async Task<ActionResult> BlockPosting(int userId)
-    //{
-    //    throw new NotImplementedException();
-    //}
 
-    //[HttpPatch("unblock-user-posting")]
-    //public async Task<ActionResult> RevertBlockPosting(int userId)
-    //{
-    //    throw new NotImplementedException();
-    //}
+    [HttpGet("user-permissions/{userId}")]
+    public async Task<ActionResult> GetUserPermissions(string userId)
+    {
+        await _adminService.GetUserPermissionsList(userId);
+        throw new NotImplementedException();
+    }
 
     [HttpGet("tags")]
     public async Task<ActionResult<Tag>> GetTags()
@@ -113,24 +112,18 @@ public class AdminController(IAdminService _adminService, IDataStore _dataStore)
         return NoContent();
     }
 
-    // Comments Mngmnt
-    /*
-    [HttpGet("roles")]
-    public async Task<ActionResult<IEnumerable<RolesRequest>>> GetAllRolesAsync()
-    {
-        var roles = await _dataStore.Roles.GetAllAsync();
-        var rolesList = roles.Select(r => new RolesRequest(r.Id, r.RoleName));   
-        return Ok(rolesList);
-    }
 
-    [HttpGet("users")]
-    public async Task<ActionResult<IEnumerable<UsersRequest>>> GetUsers()
+    [HttpGet("transactions")]
+    public async Task<ActionResult> GetTransactions()
     {
-        var result = await _dataStore.Users.GetAllAsync();
         throw new NotImplementedException();
     }
 
-    */
+    [HttpGet("transactions/{userId}")]
+    public async Task<ActionResult> SearchTransactions(string userId)
+    {
+        throw new NotImplementedException();
+    }
 }
 
 

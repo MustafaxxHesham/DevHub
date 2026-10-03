@@ -1,15 +1,11 @@
 ﻿using DevHub.ActionFilters;
-using DevHub.DTOS.Commons;
 using DevHub.DTOS.Users;
 using DevHub.Responses;
 using DevHub.Services.UsersService;
+using DevHub.Utilities;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 namespace DevHub.Controllers;
-
-/* UsersModule,    ReportsModule, TagsModule, CategoriesModule, CommentsModule, PostsModule [1]*/
-/* CoursesModule,  SubscriptionsModule--> AuthorizationRules, WalletModule                  [2]*/
-/* Angular Front-End Using NgRx for state management                                        [3]*/
 
 [ApiController]
 [Route("api/v1/users")]
@@ -66,8 +62,13 @@ public class UsersController(IUsersService _userService) : ControllerBase
     public async Task<ActionResult> SearchUsers(string query)
     {
         int pageSize = int.Parse(HttpContext.Request.Headers["X-PageSize"]!);
+
         int pageNumber = int.Parse(HttpContext.Request.Headers["X-PageNumber"]!);
-        var result = await _userService.SearchUsersAsync(new PagedSearchRequest(query, pageSize, pageNumber));
+
+        var keyPagedRequest = KeyPagedRequest<string>.PagedRequestCreate(query, pageSize, pageNumber);
+
+        var result = await _userService.SearchUsersAsync(keyPagedRequest);
+
         return Ok(result);
     }
 
@@ -76,7 +77,7 @@ public class UsersController(IUsersService _userService) : ControllerBase
     {
         var webRootPath = HttpContext.RequestServices.GetService<IWebHostEnvironment>()?.WebRootPath;
 
-        var result = await _userService.UpdateUserAsync(request, webRootPath);
+        var result = await _userService.UpdateUserAsync(request, webRootPath!);
         
         if (!result.IsSuccess)
         {
@@ -165,5 +166,17 @@ public class UsersController(IUsersService _userService) : ControllerBase
     public async Task<ActionResult> GetRatio()
     {
         return Ok(await _userService.GetUsersAuthRatioAsync());
+    }
+
+    [HttpGet("{userId}/balance")]
+    public async Task<ActionResult> GetUserBalance(string userId) 
+    {
+        throw new NotImplementedException();
+//        return (await _userService.GetUserBalanceAsync(userId));
+    }
+    [HttpGet("users/subscription-based")]
+    public async Task<ActionResult> GetUsersBySub()
+    {
+        throw new NotImplementedException();
     }
 }

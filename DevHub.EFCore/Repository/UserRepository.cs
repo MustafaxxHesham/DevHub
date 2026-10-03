@@ -102,16 +102,16 @@ public class UserRepository(AppDbContext _context) : BaseRepository<User, int>(_
     {
         await _context.Followers.AddAsync(userFollower);
     }
-    public async Task<Dictionary<string, int>> GetAuthRatio()
+    public async Task<Dictionary<string, double>> GetAuthRatio()
     {
         int totalCount = await _context.Users.CountAsync();
-        int gooleAuthCount = await _context.ExternalLogins.CountAsync(x => x.LoginKey.Equals("Google"));
+        int googleAuthCount = await _context.ExternalLogins.CountAsync(x => x.LoginKey.Equals("Google"));
         int githubAuthCount = await _context.ExternalLogins.CountAsync(x => x.LoginKey.Equals("GitHub"));
-        Dictionary<string, int> resultRatio = new Dictionary<string, int>
+        Dictionary<string, double> resultRatio = new Dictionary<string, double>
         {
             ["Total Count"] = totalCount,
-            ["Google Auth Count"] = gooleAuthCount,
-            ["Github Auth Count"] = githubAuthCount
+            ["Google Auth Count"] = (googleAuthCount / totalCount) * 100,
+            ["Github Auth Count"] = (githubAuthCount / totalCount) * 100
         };
         return resultRatio;
     }

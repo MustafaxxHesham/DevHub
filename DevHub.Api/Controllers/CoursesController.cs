@@ -1,10 +1,11 @@
 ﻿using DevHub.ActionFilters;
-using DevHub.DTOS.Commons;
 using DevHub.DTOS.CourseChapters;
 using DevHub.DTOS.Courses;
+using DevHub.DTOS.CourseVideos;
+using DevHub.Responses;
 using DevHub.Services.CoursesService;
+using DevHub.Utilities;
 using Microsoft.AspNetCore.Mvc;
-using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 
 namespace DevHub.Controllers;
 
@@ -12,23 +13,43 @@ namespace DevHub.Controllers;
 [Route("api/v1/courses")]
 public class CoursesController(ICoursesService _coursesService) : ControllerBase
 {
+
     [HttpGet("{courseId}")]
     public async Task<ActionResult<CourseResponse>> Get(string courseId)
     {
-        var course = await _coursesService.GetCourseByIdAsync(courseId);
-
-        if (!course.IsSuccess)
+        if (string.IsNullOrEmpty(courseId))
         {
-            return NotFound(course.Error);
+            return BadRequest("course id not sent!");
+        }
+        var result = await _coursesService.GetCourseByIdAsync(courseId);
+
+        if (!result.IsSuccess)
+        {
+            return NotFound(result.Error);
         }
 
-        return Ok(course.Value);
+        return Ok(result.Value);
+    }
+
+    [HttpPatch("")]
+    public async Task<ActionResult> EditChapter(string chapterId, string title)
+    {
+        throw new NotImplementedException();
     }
 
     [HttpDelete("{courseId}")]
-    public Task<ActionResult> Delete(string courseId)
+    public async Task<ActionResult> Delete(string courseId)
     {
-        throw new NotImplementedException();
+        var webRootPath = HttpContext.RequestServices.GetRequiredService<IWebHostEnvironment>().WebRootPath;
+
+        var deletionResult = await _coursesService.DeleteCourseAsync(courseId, webRootPath);
+
+        if (!deletionResult.IsSuccess)
+        {
+            return StatusCode(500); // Not Final Result
+        }
+
+        return NoContent();
     }
 
     [HttpPut("{courseId}")]
@@ -36,17 +57,25 @@ public class CoursesController(ICoursesService _coursesService) : ControllerBase
     {
         throw new NotImplementedException();
     }
-
-    [HttpPatch("{courseId}")]
-    public Task<ActionResult> Patch(string courseId)
-    {
-        throw new NotImplementedException();
-    }
-
+    
     [HttpPost("{courseId}/chapter")]
-    public Task<ActionResult> AddChapter(string courseId)
+    public async Task<ActionResult> AddChapter(CreateChapterRequest request)
     {
-        throw new NotImplementedException();
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState.Values);
+        }
+        var result = await _coursesService.CreateChapterAsync(request);
+
+        if (!result.IsSuccess)
+        {
+            if (result.Error.Equals(ResponseMessages.COURSE_NOT_FOUND))
+            {
+                return NotFound(result.Error);
+            }
+            return BadRequest(result.Error);
+        }
+        return CreatedAtAction("", "");// To be checked....
     }
 
     [HttpGet("{courseId}/chpater/{chaptedId}")]
@@ -56,7 +85,7 @@ public class CoursesController(ICoursesService _coursesService) : ControllerBase
     }
 
     [HttpGet("minimal-course/{courseId}")]
-    public Task<ActionResult> GetMinimalCourse()
+    public Task<ActionResult<IEnumerable<CourseResponse>>> GetMinimalCourse()
     {
         throw new NotImplementedException();
     }
@@ -71,18 +100,20 @@ public class CoursesController(ICoursesService _coursesService) : ControllerBase
         }
 
         int pageSize = int.Parse(HttpContext.Request.Headers["X-PageSize"]!);
+
         int pageNumber = int.Parse(HttpContext.Request.Headers["X-PageNumber"]!);
 
-        var pagedRequest = new PagedSearchRequest(query, pageSize, pageNumber);
+        var pagedRequest = KeyPagedRequest<string>.PagedRequestCreate(query, pageSize, pageNumber);
 
-        var result = await _coursesService.SearchCoursesAsync(pagedRequest);
+        var pagedResponse = await _coursesService.SearchCoursesAsync(pagedRequest);
 
-        return Ok(result);
+        return Ok(pagedResponse);
     }
     
     // To Be Revisioned As Temporary Solution
     public record class FilteredPagedRequest(string Query, string Plan);
     [HttpGet("minimal-course/{query}/filter/{course-type}")]
+    [PaginationValidator]
     public async Task<ActionResult> FilterCourses(FilteredPagedRequest request)
     {
         if (string.IsNullOrEmpty(request.Query))
@@ -94,7 +125,7 @@ public class CoursesController(ICoursesService _coursesService) : ControllerBase
 
         int pageNumber = int.Parse(HttpContext.Request.Headers["X-PageNumber"]!);
 
-        var pagedRequest = new PagedSearchRequest(request.Query, pageSize, pageNumber);
+        var pagedRequest = KeyPagedRequest<string>.PagedRequestCreate(request.Query, pageSize, pageNumber);
 
         var result = await _coursesService.SearchCoursesAsync(pagedRequest);
 
@@ -110,8 +141,9 @@ public class CoursesController(ICoursesService _coursesService) : ControllerBase
 
     [HttpPost("{courseId}/chapters/{chapterId}/upload-video")]
     [VideoFileValidator]
-    public async Task<ActionResult> UploadVideo(IFormFile courseVideo)
+    public async Task<ActionResult> UploadVideo([FromBody]ChapterVideoRequest request, [FromRoute]string chapterId, [FromRoute]string courseId)
     {
+        var result = await _coursesService.UploadChapterVideo(request, chapterId, courseId);
         throw new NotImplementedException();
     }
 }

@@ -7,6 +7,8 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using DevHub.Domain.Models;
 using DevHub.Responses;
+using DevHub.DTOS.Commons;
+using DevHub.Utilities;
 
 
 namespace DevHub.Services.AdminService;
@@ -82,9 +84,10 @@ public class AdminService(IDataStore _dataStore, IDataProtectionProvider _dataPr
         return Result<IEnumerable<UsersRequest>>.Success(result);
     }
 
-    public async Task<IEnumerable<UsersRequest>> GetAccountsRoleBasedAsync(int roleId, int pageSize = 6, int pageNumber = 1)
+    public async Task<IEnumerable<UsersRequest>> GetAccountsRoleBasedAsync(KeyPagedRequest<int> request)
     {
-        return await _dataStore.Users.GetUsersListRoleBasedAsync(pageSize, pageNumber, roleId)
+        //  Critical To be Revisioned!!!!!
+        return await _dataStore.Users.GetUsersListRoleBasedAsync(request.PageSize, request.PageNumber, request.Key)
                                      .ProjectToType<UsersRequest>()
                                      .ToListAsync();
     }

@@ -2,5 +2,6 @@
 public enum NotificationType
 {
     Comment,
-    React,
+    Reaction,
+    ReportState,
 }

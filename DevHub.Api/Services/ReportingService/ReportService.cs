@@ -125,10 +125,10 @@ public class ReportService(IDataProtectionProvider provider, IDataStore _dataSto
 
         return Result<PagedResponse<ReportResponse>>.Success(response);
     }
-    public async Task<Result<PagedResponse<ReportResponse>>> GetWeeklyReportsAsync(int week, int pageSize, int pageNumber)
+    public async Task<Result<PagedResponse<ReportResponse>>> GetWeeklyReportsAsync(KeyPagedRequest<int> request)
     {
         // needs logic to paginatiion
-        var reports = await _dataStore.Reports.GetByCriteriaAsync(x => x.CreatedAt < (DateTime.Today.AddDays(-7 * week)), x => x.Id, pageSize, pageNumber,
+        var reports = await _dataStore.Reports.GetByCriteriaAsync(x => x.CreatedAt < (DateTime.Today.AddDays(-7 * request.Key)), x => x.Id, request.PageSize, request.PageNumber,
             ["Reporter", "User"]);
 
         if (!reports.ValueList.Any())
@@ -142,12 +142,12 @@ public class ReportService(IDataProtectionProvider provider, IDataStore _dataSto
 
         return Result<PagedResponse<ReportResponse>>.Success(response);
     }
-    public async Task<Result<PagedResponse<ReportResponse>>> GetReportsByUserAsync(PagedRequest request)
+    public async Task<Result<PagedResponse<ReportResponse>>> GetReportsByUserAsync(KeyPagedRequest<string> request)
     {
         int cId = 0;
         try
         {
-            cId = getIntId(request.CriteriaId, ProtectionPurposes.USER_ID_PURPOSE);
+            cId = getIntId(request.Key, ProtectionPurposes.USER_ID_PURPOSE);
         }
         catch (Exception ex)
         {

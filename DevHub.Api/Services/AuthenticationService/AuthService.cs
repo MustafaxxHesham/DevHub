@@ -4,7 +4,8 @@ using DevHub.Domain.Models;
 using DevHub.Domain.Result;
 using DevHub.DTOS.Auth;
 using DevHub.Options;
-using Microsoft.AspNetCore.DataProtection;
+using DevHub.Responses;
+using DevHub.Utilities;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
@@ -13,26 +14,22 @@ using System.Text;
 
 namespace DevHub.Services.AuthenticationService;
 
-public class AuthService(IOptions<JwtOptions> option,
-        IDataStore _dataStore,
-        ILogger<AuthService> _logger,
-        IDataProtectionProvider protectorProvider,
-        IWebHostEnvironment _env) : IAuthService
+public class AuthService(IOptions<JwtOptions> option, IDataStore _dataStore,
+                         ILogger<AuthService> _logger, ProtectionHandler _handler,
+                         IWebHostEnvironment _env) : IAuthService
 {
     private readonly JwtOptions _jwt = option.Value;
-    private readonly IDataProtector _protectorUserId = protectorProvider.CreateProtector("UserId");
-    private readonly IDataProtector _protectorPassword = protectorProvider.CreateProtector("password");
 
     public async Task<Result<LoginUserResponse>> AuthenticateUserAsync(LoginUserRequest request)
     {
-        var password = _protectorPassword.CreateProtector("password").Protect(request.Password);
+        //var password = _protectorPassword.Protect(request.Password);
 
         var user = await _dataStore.Users.GetByCriteriaFirstAsync(u => u.Email.Equals(request.Email));
 
-        string pass = _protectorPassword.CreateProtector("password").Unprotect(user.PasswordHashed);
+//        string pass = _protectorPassword.Unprotect(user.PasswordHashed);
 
-        if (user is null || !pass.Equals(request.Password))
-            return Result<LoginUserResponse>.Failure("Email or password is invalid!");
+        //if (user is null || !pass.Equals("dadas"))
+        //    return Result<LoginUserResponse>.Failure("Email or password is invalid!");
 
         if (!user.IsActive)
             return Result<LoginUserResponse>.Failure("User can't sign in due to not actived.");
@@ -59,39 +56,27 @@ public class AuthService(IOptions<JwtOptions> option,
             RefreshToken = refreshToken.Token,
             FullName = user.Email,
             ProfileImageUrl = user.ProfileImageUrl ?? "",
-            AccessToken = GenerateUserToken(user),  //Mocking
+            AccessToken = GenerateAccessToken(user),  //Mocking
         };
 
         return Result<LoginUserResponse>.Success(userlogin);
     }
-    public async Task<Result<AddUserResponse>> SaveUserAsync(AddUserRequest request)
+    public async Task<Result<AddUserResponse>> CreateUserAsync(AddUserRequest request)
     {
-        if (await _dataStore.Users.IsEmailExistAsync(request.Email))
+        if (await _dataStore.Users.IsEmailExistAsync(request.Email!))
+        {
             return Result<AddUserResponse>.Failure("Email already exists!");
-
-        var user = new User
-        {
-            FirstName = request.FirstName,
-            LastName = request.LastName,
-            Email = request.Email,
-            PasswordHashed = _protectorPassword.CreateProtector("password").Protect(request.PasswordHashed),
-            CreatedAt = DateTime.Now,
-            Bio = request.Bio,
-            IsActive = true,
-            IsEmailVerified = false,
-            ProfileImageUrl =/* await UploadImageFileToServerAsync(request.ProfileImage)*/ "XX",
-            RoleId = (await _dataStore.Roles.GetByCriteriaFirstAsync(r => r.RoleName.Equals(Roles.Reader.ToString()))).Id
-        };
-
-        var dbResult = await _dataStore.Users.AddAsync(user);
-
-        if (await _dataStore.CompleteAsync() > 0)
-        {
-            var response = new AddUserResponse(101, "", "");   // Requires Mocking
-
-            return Result<AddUserResponse>.Success(response);
         }
-        return Result<AddUserResponse>.Failure("");
+
+        var user = await ConvertRequestToUserAsync(request);
+
+        await _dataStore.Users.AddAsync(user);
+
+        await _dataStore.CompleteAsync();
+    
+        var response = new AddUserResponse(101, "", "");   // Requires Mocking
+
+        return Result<AddUserResponse>.Success(response);
     }
     public async Task<Result<RefreshTokenLoginResponse>> AuthenticateByRefreshTokenAsync(string refreshToken)
     {
@@ -99,28 +84,33 @@ public class AuthService(IOptions<JwtOptions> option,
                                 .GetByCriteriaFirstAsync(rt => rt.Token == refreshToken && rt.IsActive, ["User"]);
 
         if (refreshTokenFromDb is null)
+        {
             return Result<RefreshTokenLoginResponse>.Failure("Refresh Token doesn't exist."); // UnAuthenticated
+        }
 
         refreshTokenFromDb.IsActive = false;
         refreshTokenFromDb.RevokeOn = DateTime.Now.ToLocalTime();
 
         var userRefreshToken = new RefreshToken
         {
-            CreatedAt = DateTime.Now.ToLocalTime(),
-            ExpiredOn = DateTime.Now.ToLocalTime().AddMinutes(2),// updatedBy appsettings.json
+            CreatedAt = DateTime.UtcNow.ToLocalTime(),
+            ExpiredOn = DateTime.UtcNow.ToLocalTime().AddMinutes(200),// updatedBy appsettings.json
             IsActive = true,
             Token = GenerateRefreshToken(),
             UserId = refreshTokenFromDb.UserId
         };
 
         _dataStore.RefreshTokens.UpdateItem(refreshTokenFromDb);
+
         await _dataStore.RefreshTokens.AddAsync(userRefreshToken);
         await _dataStore.CompleteAsync();
 
-        var accessToken = GenerateUserToken(refreshTokenFromDb.User);
+        var accessToken = GenerateAccessToken(refreshTokenFromDb.User);
 
         if (string.IsNullOrEmpty(accessToken))
+        {
             return Result<RefreshTokenLoginResponse>.Failure("User doesn't exist"); // Bad Request
+        }
 
         var response = new RefreshTokenLoginResponse(accessToken, userRefreshToken.Token);
 
@@ -128,11 +118,22 @@ public class AuthService(IOptions<JwtOptions> option,
     }
     public async Task<Result<string>> VerifyEmailAsync(string email)
     {
-        var result = await _dataStore.Users.GetByEmailAsync(email);
-        if (result is null)
-            return Result<string>.Failure("Email doesn't exist.");
-        result.IsEmailVerified = true;
+        var user = await _dataStore.Users.GetByEmailAsync(email);
+
+        if (user is null)
+        {
+            return Result<string>.Failure(ResponseMessages.USER_NOT_FOUND);
+        }
+
+        if (user.IsEmailVerified)
+        {
+            return Result<string>.Failure(ResponseMessages.ACTION_ALREADY_DONE);
+        }
+
+        user.IsEmailVerified = true;
+
         await _dataStore.CompleteAsync();
+
         return Result<string>.Success(string.Empty);
     }
     public async Task<Result<string>> GenerateJwtTokenByUserId(int userId)
@@ -142,7 +143,7 @@ public class AuthService(IOptions<JwtOptions> option,
         if (user is null)
             return Result<string>.Failure("User not Found");
 
-        return Result<string>.Success(GenerateUserToken(user));
+        return Result<string>.Success(GenerateAccessToken(user));
     }
     public async Task<SimpleResult<bool>> IsEmailVerifiedAsync(string email)
     {
@@ -205,13 +206,15 @@ public class AuthService(IOptions<JwtOptions> option,
         var effectedRows = await _dataStore.CompleteAsync();
         return effectedRows > 0;
     }
+
+
     private string GenerateRefreshToken()
     {
         return Guid.NewGuid().ToString();
     }
-    private string GenerateUserToken(User user)
+    private string GenerateAccessToken(User user)
     {
-        var userId = _protectorUserId.Protect(user.Id.ToString());
+        var userId = _handler.GetProtectedUserId(user.Id);
         // Instaniate (tokenHandler, SSK(bytes.signingkey), SC, TDesc, 
         var tokenHandler = new JwtSecurityTokenHandler();
 
@@ -225,12 +228,13 @@ public class AuthService(IOptions<JwtOptions> option,
             Expires = DateTime.Now.AddSeconds(_jwt.LifeTime),
             Audience = _jwt.Audience,
             SigningCredentials = signingCredentials,
-            Subject = new ClaimsIdentity(new Claim[]
+            Subject = new ClaimsIdentity(new[]
             {
                 new Claim(ClaimTypes.Role, Roles.Reader.ToString()),
                 new Claim(ClaimTypes.Name, user.FirstName + user.LastName),
                 new Claim(ClaimTypes.Email, user.Email),
-                new Claim("UserId", userId)
+                new Claim(ClaimTypes.NameIdentifier, userId),
+                new Claim(nameof(SubscriptionPlans), SubscriptionPlans.Free.ToString())   // Mocked
             })
         };
         var securityToken = tokenHandler.CreateToken(tokenDescriptor);
@@ -247,5 +251,20 @@ public class AuthService(IOptions<JwtOptions> option,
 
         return imagePath;
     }
-
+    private async Task<User> ConvertRequestToUserAsync(AddUserRequest request)
+    {
+        return new User
+        {
+            FirstName = request.FirstName!,
+            LastName = request.LastName!,
+            Email = request.Email!,
+            PasswordHashed = _handler.GetProtectedPassword(request.Password!),
+            CreatedAt = DateTime.UtcNow,
+            Bio = request.Bio!,
+            IsActive = true,
+            IsEmailVerified = false,
+            ProfileImageUrl = await UploadImageFileToServerAsync(request.ProfileImage!),
+            RoleId = (await _dataStore.Roles.GetByCriteriaFirstAsync(r => r.RoleName.Equals(Roles.Reader.ToString()))).Id
+        };
+    }
 }

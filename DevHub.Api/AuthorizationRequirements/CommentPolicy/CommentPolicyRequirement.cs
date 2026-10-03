@@ -1,4 +1,4 @@
 ﻿using Microsoft.AspNetCore.Authorization;
-namespace DevHub.API.AuthorizationRequirements;
+namespace DevHub.AuthorizationRequirements.CommentPolicy;
 
 public class CommentPolicyRequirement : IAuthorizationRequirement { }

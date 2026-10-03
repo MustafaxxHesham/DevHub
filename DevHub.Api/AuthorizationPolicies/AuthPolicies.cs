@@ -1,9 +1,11 @@
-﻿namespace DevHub.AuthorizationClaims;
+﻿namespace DevHub.AuthorizationPolicies;
 
-public class AuthorizationSchemas
+public static class AuthPolicies
 {
-    //
+    public const string AddPostPolicy = "Add Post";
+    public const string AddCommentPolicy = "Add Comment";
 }
+
 /*
 1. Platform Subscription
 2. Author Subscription
@@ -11,7 +13,6 @@ public class AuthorizationSchemas
 
 Table. SubscriptionPlan     (Id, Name, Price, BillingCycle, Description, CreatedAt)  <Data> -->(Free, Pro, Premium)
 Table. UserSubscription     (Id, UserId, PlanId, StartDate, EndDate, IsActive, PaymentProvider, PaymentId)
-Table. AuthorSubscription   (Id, UserId, AuthorId, Price, StartDate, EndDate, IsActive)
 
 Modify Posts Table Add Column (AccessLevel) [Free, Premium, SubscribersOnly]
 

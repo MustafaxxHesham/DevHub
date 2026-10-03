@@ -1,4 +1,5 @@
-﻿using DevHub.Domain.Models;
+﻿using DevHub.Domain.Base;
+using DevHub.Domain.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 
@@ -12,8 +13,7 @@ public class DeletePostInterceptor : SaveChangesInterceptor
         if (context is null)
             return result;
 
-        var entries = context.ChangeTracker.Entries<Post>();
-        var bk = context.ChangeTracker.Entries<BookmarkedPost>();
+        var entries = context.ChangeTracker.Entries<ISoftDeletable>();
         
         foreach (var entry in entries)
         {

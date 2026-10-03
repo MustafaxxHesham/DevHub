@@ -5,6 +5,10 @@ public class AppDbContext : DbContext
 {
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) {}
     public DbSet<Report> Reports { set; get; }
+    public DbSet<Feedback> Feedbacks { set; get; }
+    public DbSet<SubscriptionFeature> SubscriptionFeatures { get; set; }
+    public DbSet<SubscriptionPlan> SubscriptionPlans { get; set; }
+    public DbSet<UserSubscription> UserSubscriptions { get; set; }
     public DbSet<Category> Categories { set; get; }
     public DbSet<User> Users { set; get; }
     public DbSet<Role> Roles { set; get; }
@@ -19,6 +23,8 @@ public class AppDbContext : DbContext
     public DbSet<BookmarkedPost> BookmarkedPosts { set; get; }
     public DbSet<Tag> Tags { set; get; }
     public DbSet<Reaction> Reactions { set; get; }
+    public DbSet<Wallet> Wallets { set; get; }
+    public DbSet<Transaction> Transactions { set; get; }
     public DbSet<MinimalPost> MinimalPosts { set; get; }
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

@@ -1,7 +1,5 @@
 ﻿namespace DevHub.DTOS.Comments;
-
-public record SubmitCommentRequest(
-    string Content,
-    int UserId,
-    int PostId,
-    int? ParentCommentId = null) {}
+public record class SubmitCommentRequest(string Content, 
+    string UserId, 
+    string PostId, 
+    string? ParentCommentId = null);

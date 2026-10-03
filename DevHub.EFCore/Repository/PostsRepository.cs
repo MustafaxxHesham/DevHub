@@ -1,6 +1,8 @@
-﻿using DevHub.Domain.LogicContract.RepositoryContract;
+﻿using DevHub.Domain.Helpers;
+using DevHub.Domain.LogicContract.RepositoryContract;
 using DevHub.Domain.Models;
 using DevHub.Domain.Result;
+using DevHub.EFCore.EFCorePaginationHelper;
 using Microsoft.EntityFrameworkCore;
 using System.Text;
 
@@ -87,6 +89,42 @@ public class PostsRepository(AppDbContext _context) : BaseRepository<Post, int>(
         )");
         var finalScript = stringBuilder.ToString();
         _context.Posts.FromSql($"{finalScript}");
+    }
+
+    public Task<DateTime> GetLastPostDateForUserAsync(int userId)
+    {
+        return _context.Posts.OrderByDescending(p => p.CreatedAt)
+                            .Where(x => x.AuthorId == userId)
+                            .Select(x => x.CreatedAt)
+                            .FirstOrDefaultAsync();
+    }
+
+    public async Task<IPagedList<Post>> GetAsync()
+    {
+        var query = _context.Posts.Include(p => p.Tags)
+                                  .Include(p => p.Author)
+                                  .Select(post => new Post
+                                  {
+                                      Id = post.Id,
+                                      Title = post.Title,
+                                      AuthorId = post.AuthorId,
+                                      Slug = post.Slug,
+                                      Reactions = post.Reactions,
+                                      PublishedAt = post.PublishedAt,
+                                      MainImageUrl = post.MainImageUrl,
+                                      Author = new User
+                                      {
+                                          Id = post.Author.Id,
+                                          FirstName = post.Author.FirstName,
+                                          LastName = post.Author.LastName,
+                                          Email = post.Author.Email,
+                                          ProfileImageUrl = post.Author.ProfileImageUrl,
+                                      }
+                                  })!;
+
+        var result = await PagedResponse<Post>.CreateAsync(query, 6, 1);
+
+        return result;
     }
 
 

@@ -48,4 +48,10 @@ public class ReactionsController(IDataStore _dataStore) : ControllerBase
 
         throw new Exception("Error Due to db server");
     }
+
+    [HttpGet("reaction-for-user")]
+    public async Task<ActionResult> GetForUser()
+    {
+        throw new NotImplementedException();
+    }
 }

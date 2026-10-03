@@ -1,2 +1,3 @@
 ﻿namespace DevHub.DTOS.Auth;
-public record EmailVerificationRequest(string email, string token);
+public record EmailVerificationRequest(string email, string token,
+    CancellationToken CancellationToken = default);

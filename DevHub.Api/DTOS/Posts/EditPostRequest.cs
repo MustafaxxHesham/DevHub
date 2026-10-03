@@ -1,10 +1,10 @@
-﻿using DevHub.Domain.Enums;
-using DevHub.Domain.Models;
+﻿using DevHub.Domain.Models;
 using System.ComponentModel.DataAnnotations;
 
 namespace DevHub.DTOS.Posts;
 public record class EditPostRequest
 {
+    public string PostId { get; set; }
     public string? Title { get; set; }
     public string? Slug { get; set; }
     public string? Content { get; set; }
@@ -12,8 +12,7 @@ public record class EditPostRequest
     public string? CategoryName { get; set; }
     public string AuthorId { get; set; }
     [FileExtensions(Extensions = "jpg,png,jpeg")]
-    public IFormFile? MainImageUrl { get; set; }
-    public PostStatus? Status { get; set; }
+    public IFormFile? MainImage { get; set; }
     public ICollection<Tag> Tags { get; set; }
     public List<string> ImagesKey { get; set; }
     [FileExtensions(Extensions = "jpg,png,jpeg")]

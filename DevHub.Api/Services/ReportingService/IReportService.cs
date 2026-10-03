@@ -9,11 +9,11 @@ public interface IReportService
     Task<Result<ReportAnswerResponse>> GetAnswerReportAsync(string reportId);
     Task<Result<PagedResponse<ReportResponse>>> GetReportsAsync(int pageSize, int pageNumber);
     Task<Result<PagedResponse<ReportResponse>>> GetReportsByAdminViewAsync(bool adminViewed, int pageSize, int pageNumber);
-    Task<Result<PagedResponse<ReportResponse>>> GetReportsByUserAsync(PagedRequest request);
+    Task<Result<PagedResponse<ReportResponse>>> GetReportsByUserAsync(KeyPagedRequest<string> request);
     Task<Result<PagedResponse<ReportResponse>>> GetReportsForCommentsAsync(int pageSize, int pageNumber);
     Task<Result<PagedResponse<ReportResponse>>> GetReportsForPostsAsync(int pageSize, int pageNumber);
     Task<Result<PagedResponse<ReportResponse>>> GetMonthlyReportsAsync(PagedReportMonthlyRequest request);
-    Task<Result<PagedResponse<ReportResponse>>> GetWeeklyReportsAsync(int week, int pageSize, int pageNumber);
+    Task<Result<PagedResponse<ReportResponse>>> GetWeeklyReportsAsync(KeyPagedRequest<int> request);
     Task<SimpleResult<int>> AnswerReportAsync(ReportAnswerRequest request);
     Task<SimpleResult<bool>> SaveReportAsync(SaveReportRequest request);
     Task<SimpleResult<bool>> MarkReportAsViewedAsync(string reportId);

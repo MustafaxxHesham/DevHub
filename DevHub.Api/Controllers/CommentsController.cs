@@ -1,4 +1,5 @@
-﻿using DevHub.Domain.DataStoreContract;
+﻿using DevHub.AuthorizationPolicies;
+using DevHub.Domain.DataStoreContract;
 using DevHub.Domain.Models;
 using DevHub.DTOS.Comments;
 using DevHub.Responses;
@@ -9,10 +10,12 @@ using Microsoft.AspNetCore.Mvc;
 namespace DevHub.Controllers;
 
 [ApiController]
-[Route("api/v1/comments/{postId?}")]
-public class CommentsController(IDataStore _dataStore, ICommentService _commentService, ILogger<CommentsController> _logger) : ControllerBase
+[Route("api/v1/posts/{postId}/comments")]
+public class CommentsController(IDataStore _dataStore,
+    ICommentService _commentService,
+    ILogger<CommentsController> _logger) : ControllerBase
 {
-    [HttpGet("comments")]
+    [HttpGet]
     public async Task<ActionResult<IEnumerable<Comment>>> GetAllMainComments([FromRoute]int postId)
     {
         var result = await _dataStore.Comments.GetByCriteriaAsync(p => p.PostId == postId, x => x.Id);
@@ -23,7 +26,7 @@ public class CommentsController(IDataStore _dataStore, ICommentService _commentS
         return BadRequest();
     }
 
-    [HttpGet("replies")]
+    [HttpGet("{commentId}/replies")]
     public async Task<ActionResult<IEnumerable<Comment>>> GetAllRepliesToComment([FromQuery]CommentRepliesRequest request)
     {
 
@@ -33,22 +36,22 @@ public class CommentsController(IDataStore _dataStore, ICommentService _commentS
         return Ok(result);
     }
 
-    [Authorize(Policy = "Comment")]
     [HttpPost]
+    [Authorize(Policy = AuthPolicies.AddCommentPolicy)]
     public async Task<ActionResult> Comment(SubmitCommentRequest request) 
     {
-        if (!await _dataStore.Posts.IsExistAsync(request.PostId))
-            return BadRequest("Post Not Found!");
+        //if (!await _dataStore.Posts.IsExistAsync(request.PostId))
+        //    return BadRequest("Post Not Found!");
 
-        if ((request.ParentCommentId.HasValue && request.ParentCommentId > 0) && !await _dataStore.Comments.IsExistAsync(request.ParentCommentId.Value))
-            return BadRequest("No Parent Comment to nested!");
+        //if ((request.ParentCommentId.HasValue && request.ParentCommentId > 0) && !await _dataStore.Comments.IsExistAsync(request.ParentCommentId.Value))
+        //    return BadRequest("No Parent Comment to nested!");
 
-        var result = await _commentService.AddCommentAsync(request);
+        //var result = await _commentService.AddCommentAsync(request);
 
-        if (!result.IsSuccess)
-            return BadRequest(result.Error);
+        //if (!result.IsSuccess)
+        //    return BadRequest(result.Error);
 
-//            await _notificationService.NotifyAuthor(authorId);
+        // BackgroundJob.Enqueue(() => _notificationService.NotifyAuthor(authorId));
 
         return Ok();
     }
@@ -90,7 +93,7 @@ public class CommentsController(IDataStore _dataStore, ICommentService _commentS
         return NoContent();
     }
 
-    [HttpGet("countsss/{postd}")]
+    [HttpGet("counts")]
     public async Task<ActionResult> GetCommentsCount(string postId)
     {
         var result = await _commentService.GetCommentsCount(postId);

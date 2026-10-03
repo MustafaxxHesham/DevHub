@@ -14,6 +14,11 @@ public interface IDataStore : IDisposable
     IBaseRepository<ExternalLogin, int> ExternalLogins { get; }
     IBaseRepository<Tag, int> Tags { get; }
     IBaseRepository<Report, int> Reports { get; }
+    IBaseRepository<UserSubscription, int> UserSubscriptions { get; }
+    IBaseRepository<SubscriptionFeature, int> SubscriptionFeatures { get; }
+    IBaseRepository<SubscriptionPlan, int> SubscriptionPlans { get; }
+    IBaseRepository<Transaction, int> Transactions { get; }
+    IBaseRepository<Wallet, Guid> Wallets { get; }
     ICoursesRepository Courses { get; }
     IBaseRepository<ReportAnswer, int> ReportAnswers { get; }
     IBaseRepository<CourseChapter, int> CourseChapters { get; }

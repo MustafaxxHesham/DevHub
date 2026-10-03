@@ -1,36 +1,48 @@
-using DevHub.API.AuthorizationRequirements;
 using DevHub.EFCore;
 using DevHub.Middlewares;
 using DevHub.Services;
-using DevHub.Services.PostsService;
 using DevHub.Utilities;
 using Hangfire;
+using Hangfire.SqlServer;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-void ConfigApiBehavior(ApiBehaviorOptions options)
-{
-    options.InvalidModelStateResponseFactory = x => new BadRequestObjectResult(x.ModelState);
-}
+//void ConfigApiBehavior(ApiBehaviorOptions options)
+//{
+//    options.InvalidModelStateResponseFactory = x => new BadRequestObjectResult(x.ModelState);
+//}
 
-builder.Services.AddControllers().ConfigureApiBehaviorOptions(ConfigApiBehavior);
+//.ConfigureApiBehaviorOptions(ConfigApiBehavior);
+builder.Services.AddControllers();
 
 builder.Services.AddCors(setup => setup.AddPolicy("MyOwnPolicy", policyConfig => policyConfig.AddClientSidePolicy()));
 
 builder.Services.AddEntityFrameworkCoreConfigurations(builder.Configuration.GetConnectionString("DefaultConnStr")!);
 
-builder.Services.AddScoped<IAuthorizationHandler, CommentPolicyHandler>();
+builder.Services.AddAuthorization(x => x.AddAuthorizationPolicies());
 
-builder.Services.AddAuthorization(opts =>
+builder.Services.AddHangfire(c => 
+    c.SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+     .UseSimpleAssemblyNameTypeSerializer()
+     .UseRecommendedSerializerSettings()
+     .UseSqlServerStorage(builder.Configuration.GetConnectionString("HangfireConnStr"),
+        new SqlServerStorageOptions
+        {
+            PrepareSchemaIfNecessary = true
+        })
+);
+
+builder.Services.AddStackExchangeRedisCache(setup =>
 {
-    opts.AddPolicy("Comment", config => config.AddRequirements(new CommentPolicyRequirement()));
+    setup.Configuration = builder.Configuration["Redis"];
 });
 
-//builder.Services.AddHangfire(c => c.UseSqlServerStorage("connStr"));
+builder.Services.AddSignalR();
+
+builder.Services.AddHangfireServer();
 
 builder.Services.AddEndpointsApiExplorer();
 
@@ -97,7 +109,7 @@ app.UseStaticFiles();
 
 app.UseCors("MyOwnPolicy");
 
-//app.UseAuthentication();
+app.UseAuthentication();
 
 app.UseAuthorization();
 

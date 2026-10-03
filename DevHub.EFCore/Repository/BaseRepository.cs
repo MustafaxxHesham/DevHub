@@ -1,4 +1,5 @@
-﻿using DevHub.Domain.Helpers;
+﻿using DevHub.Domain.Enums;
+using DevHub.Domain.Helpers;
 using DevHub.Domain.LogicContract;
 using DevHub.EFCore.EFCorePaginationHelper;
 using Microsoft.EntityFrameworkCore;
@@ -40,12 +41,25 @@ public class BaseRepository<T, K>(AppDbContext _context) : IBaseRepository<T, K>
 
 
     // Retrieving Methods Signatures --> Search, Paginated 
-    public async Task<IEnumerable<T>> GetAllAsync() 
+    public async Task<IEnumerable<T>> GetAllAsync([Optional] string[]? includeProps) 
     {
-        return await _context.Set<T>().ToListAsync();
+        var query = _context.Set<T>().AsQueryable();
+
+        if (includeProps is not null && includeProps.Any())
+        {
+            foreach (var prop in includeProps)
+            {
+                query = query.Include(prop);
+            }
+        }
+
+        return await query.ToListAsync();
     }
-    public async Task<IPagedList<T>> GetByCriteriaAsync(Expression<Func<T, bool>> criteria, Expression<Func<T, object>> orderByCriteria,
-        [Optional] int? pageSize, [Optional] int? pageNumber, [Optional] string[]? includeProps)
+    public async Task<IPagedList<T>> GetByCriteriaAsync(Expression<Func<T, bool>> criteria, 
+        Expression<Func<T, object>> orderByCriteria,
+        [Optional] int? pageSize, 
+        [Optional] int? pageNumber,
+        [Optional] string[]? includeProps)
     {
         var query = _context.Set<T>().AsQueryable();
 
@@ -83,8 +97,7 @@ public class BaseRepository<T, K>(AppDbContext _context) : IBaseRepository<T, K>
 
         return item;
     }
-    public async Task<T> GetByIdAsync(K id) => (await _context.Set<T>().FindAsync(id))!;
-    public async Task<IPagedList<T>> GetPaginatedAsync(int pageSize, int pageNumber, Expression<Func<T, object>> orderByCriteria, [Optional] string[]? includeProps)
+    public async Task<T> GetByIdAsync(K id, [Optional] string[]? includeProps) 
     {
         var query = _context.Set<T>().AsQueryable();
 
@@ -96,13 +109,38 @@ public class BaseRepository<T, K>(AppDbContext _context) : IBaseRepository<T, K>
             }
         }
 
-        query = query.OrderBy(orderByCriteria).AsQueryable();
+        return await _context.Set<T>().FindAsync(id);
+            
+    }
+    public async Task<IPagedList<T>> GetPaginatedAsync(int pageSize, int pageNumber, Expression<Func<T, object>> orderByCriteria, 
+        [Optional] string[]? includeProps,
+        Sorting orderingDirection = Sorting.Ascending)
+    {
+        var query = _context.Set<T>().AsQueryable();
+
+        if (includeProps is not null && includeProps.Any())
+        {
+            foreach (var prop in includeProps)
+            {
+                query = query.Include(prop);
+            }
+        }
+
+        if (orderingDirection == Sorting.Descending)
+        {
+            query = query.OrderByDescending(orderByCriteria).AsQueryable();
+        }
+        else
+        {
+            query = query.OrderBy(orderByCriteria).AsQueryable();
+        }
 
         var result = await PagedResponse<T>.CreateAsync(query, pageSize, pageNumber);
 
         return result;
     }
-    public async Task<IPagedList<T>> GetPaginatedByCriteriaAsync(int pageSize, int pageNumber, Expression<Func<T, bool>> criteria, Expression<Func<T, object>> orderByCriteria, [Optional] string[]? includeProps)
+    public async Task<IPagedList<T>> GetPaginatedByCriteriaAsync(int pageSize, int pageNumber, Expression<Func<T, bool>> criteria, Expression<Func<T, object>> orderByCriteria, [Optional] string[]? includeProps
+        , Sorting sorting = Sorting.Ascending)
     {
         var query = _context.Set<T>().AsQueryable();
 
@@ -142,5 +180,20 @@ public class BaseRepository<T, K>(AppDbContext _context) : IBaseRepository<T, K>
     public async Task<bool> IsExistWithCriteriaAsync(Expression<Func<T, bool>> criteria)
     {
         return await _context.Set<T>().CountAsync(criteria) > 0;
+    }
+
+    public async Task<IEnumerable<T>> GetListByCriteriaAsync(Expression<Func<T, bool>> criteria, [Optional] string[]? includeProps)
+    {
+        var query = _context.Set<T>().Where(criteria);
+
+        if (includeProps is not null && includeProps.Any())
+        {
+            foreach (var prop in includeProps)
+            {
+                query = query.Include(prop);
+            }
+        }
+
+        return await query.ToListAsync();
     }
 }

@@ -2,78 +2,58 @@
 using DevHub.Domain.Enums;
 using DevHub.Domain.Models;
 using DevHub.Domain.Result;
+using DevHub.DTOS.Commons;
 using DevHub.DTOS.Posts;
-using DevHub.EFCore.ErrorTypes;
 using DevHub.Responses;
-using DevHub.Services.RecommendationService;
 using DevHub.Utilities;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
-using System.Security.Cryptography;
 
 namespace DevHub.Services.PostsService;
-public class PostService(IDataStore _dataStore, 
-                         IWebHostEnvironment _env, 
+public class PostService(IDataStore _dataStore, IWebHostEnvironment _env, 
+                         ProtectionHandler _protectionHandler,
                          RecommendationService.RecommendationService _recommendationService,
-                         IDataProtectionProvider provider, 
-                         ILogger<PostService> _logger) : IPostService
+                         IDataProtectionProvider provider, ILogger<PostService> _logger) : IPostService
 {
-
-    private readonly Dictionary<string, IDataProtector> _protectors = new()
-    {
-        ["userId"] = provider.CreateProtector(ProtectionPurposes.USER_ID_PURPOSE),
-        ["postId"] = provider.CreateProtector(ProtectionPurposes.POST_ID_PURPOSE),
-        ["categoryId"] = provider.CreateProtector(ProtectionPurposes.CATEGORY_ID_PURPOSE),
-        ["tagId"] = provider.CreateProtector(ProtectionPurposes.TAG_ID_PURPOSE),
-    };
 
     public async Task<Result<PostDetailsResponse>> GetPostInDetailAsync(string id)
     {
-        var realPostId = handlePostId(id);
+        //var realPostId = _protectionHandler.GetRealPostId(id);
 
-        if (realPostId == -1)
+        //if (realPostId == -1 || !await _dataStore.Posts.IsExistAsync(realPostId))
+        //{
+        //    return Result<PostDetailsResponse>.Failure(ResponseMessages.POST_NOT_FOUND);
+        //}
+
+        var post = await _dataStore.Posts.GetAsync();
+
+        if (post is null)
         {
-            return Result<PostDetailsResponse>.Failure(ResponseMessages.DATA_SENT_MANIPULATED);
+            return Result<PostDetailsResponse>.Failure(ResponseMessages.POST_NOT_FOUND);
         }
 
-        PostDetailsResponse response = (await _dataStore.Posts.GetPostDetailsAsync()
-                .Where(p => p.Id == realPostId)
-                .Select(post => new PostDetailsResponse
-                {
-                    PostId = _protectors["postId"].Protect(post.Id.ToString()),
-                    Title = post.Title,
-                    AuthorJobTitle = post.Author.JobTitle,
-                    AuthorId = _protectors["userId"].Protect(post.AuthorId.ToString()),
-                    Slug = post.Slug,
-                    Content = post.Content,
-                    Summary = post.Summary,
-                    PublishedAt = post.PublishedAt,
-                    AuthorName = post.Author.FirstName + " " + post.Author.LastName,
-                    ViewsCount = post.ViewsCount,
-                    AuthorImageUrl = post.Author.ProfileImageUrl,
-                    Reacts = post.Reactions.Count,
-                    CategoryName = post.Category.Name,
-                    CategoryId = post.Category.Id,
-                    Tags = post.Tags.Select(t => t.Name).ToArray(),
-                    MainImageUrl = post.MainImageUrl,
-                }).FirstOrDefaultAsync())!;
-
-        if (response is null)
-            return Result<PostDetailsResponse>.Failure(ResponseMessages.POST_NOT_FOUND);
-
-        return Result<PostDetailsResponse>.Success(response);
+        throw new NotImplementedException();
+        //var response = GetPostDetailsResponse(post);
+        
+        //return Result<PostDetailsResponse>.Success(response);
     }
     public async Task<SimpleResult<int>> CreatePostAsync(AddPostRequest request)
     {
+        var realUserId = _protectionHandler.GetRealUserId(request.AuthorId);
+
+        if (realUserId == -1)
+        {
+            return SimpleResult<int>.Failure("Error About Getting Id.");//Error to be revisioned
+        }
 
         var post = new Post
         {
-            //Adding Author Id
+            AuthorId = realUserId,
             Slug = request.Slug,
             Status = request.Status,
+            Tags = request.Tags,
             CategoryId = 0,
             Summary = request.Summary,
-            AuthorId = 1,
             Content = request.Content,
             MainImageUrl = await UploadImageFileToServerAsync(request.MainImageUrl, true),
             ViewsCount = 0,
@@ -99,12 +79,14 @@ public class PostService(IDataStore _dataStore,
 
         await _dataStore.CompleteAsync();
 
+//        BackgroundJob.Enqueue<PyServer>(() => ());
+
         return SimpleResult<int>.Success(post.Id);
 
     }
     public async Task<SimpleResult<bool>> DeletePostAsync(string postId)
     {
-        var realPostId = handlePostId(postId);
+        var realPostId = _protectionHandler.GetRealPostId(postId);
 
         if (realPostId < 0)
         {
@@ -124,22 +106,22 @@ public class PostService(IDataStore _dataStore,
 
         return SimpleResult<bool>.Success(true);
     }
-    public async Task<Result<IEnumerable<MinimalPost>>> SearchPostsAsMinimalAsync(SearchPostsRequest request)
+    public async Task<Result<IEnumerable<MinimalPost>>> SearchPostsAsMinimalAsync(KeyPagedRequest<string> request)
     {
-        var postsList = await _dataStore.MinimalPosts.GetMinimalPostsWithQueryAsync(request.Query, request.PageNumber, request.PageSize);
+        var postsList = await _dataStore.MinimalPosts.GetMinimalPostsWithQueryAsync(request.Key, request.PageNumber, request.PageSize);
 
         if (postsList.Any())
         {
             foreach (var post in postsList)
             {
-                post.PostId = _protectors["postId"].Protect(post.Id.ToString());
+                post.PostId = _protectionHandler.GetProtectedPostId(post.Id);
             }
             return Result<IEnumerable<MinimalPost>>.Success(postsList);
         }
 
         return Result<IEnumerable<MinimalPost>>.Failure(ResponseMessages.POST_NOT_FOUND);
     }    
-    public async Task<Result<IEnumerable<MinimalPost>>> Feed(int userId)
+    public async Task<Result<IEnumerable<MinimalPost>>> GetFeed(int userId)
     {
         if(!await _dataStore.Users.IsExistAsync(userId))
         {
@@ -171,9 +153,9 @@ public class PostService(IDataStore _dataStore,
 
     }
     // Critical Revision
-    public async Task<Result<IEnumerable<MinimalPost>>> GetPostsByCategoryAsync(string categoryId, int pageNumber, int pageSize)
+    public async Task<Result<IEnumerable<MinimalPost>>> GetPostsByCategoryAsync(KeyPagedRequest<string> request)
     {
-        int cId = int.Parse(_protectors["categoryId"].Unprotect(categoryId));
+        int cId = _protectionHandler.GetRealCategoryId(request.Key);
 
         var isCategoryExist = await _dataStore.Categories.IsExistAsync(cId);
 
@@ -181,13 +163,13 @@ public class PostService(IDataStore _dataStore,
         {
             return Result<IEnumerable<MinimalPost>>.Failure(ResponseMessages.CATEGORY_NOT_FOUND);
         }
-        var result = await _dataStore.MinimalPosts.GetMinimalPostsByCategoryAsync(cId, pageNumber, pageSize);
+        var result = await _dataStore.MinimalPosts.GetMinimalPostsByCategoryAsync(cId, request.PageNumber, request.PageSize);
 
         return Result<IEnumerable<MinimalPost>>.Success(result);
     }
-    public async Task<Result<IEnumerable<MinimalPost>>> GetPostsByTagAsync(string tagId, int pageNumber, int pageSize)
+    public async Task<Result<IEnumerable<MinimalPost>>> GetPostsByTagAsync(KeyPagedRequest<string> request)
     {
-        int tId = int.Parse(_protectors["tagId"].Unprotect(tagId));
+        int tId = _protectionHandler.GetRealTagId(request.Key);
 
         var isTagExist = await _dataStore.Tags.IsExistAsync(tId);
 
@@ -195,35 +177,33 @@ public class PostService(IDataStore _dataStore,
         {
             return Result<IEnumerable<MinimalPost>>.Failure(ResponseMessages.TAG_NOT_FOUND);
         }
-        var result = await _dataStore.MinimalPosts.GetMinimalPostsByTagAsync(tId, pageNumber, pageSize);
+
+        var result = await _dataStore.MinimalPosts.GetMinimalPostsByTagAsync(tId, request.PageNumber, request.PageSize);
 
         return Result<IEnumerable<MinimalPost>>.Success(result);
     }
-    public async Task<Result<IEnumerable<MinimalPost>>> GetBookmarkedPosts(int userId)
+    public async Task<Result<IEnumerable<MinimalPost>>> GetBookmarkedPosts(KeyPagedRequest<string> request)
     {
-        if (!await _dataStore.Users.IsExistAsync(userId))
+        int realUserId = _protectionHandler.GetRealUserId(request.Key);
+
+        if (realUserId == -1 || !await _dataStore.Users.IsExistAsync(realUserId))
         {
             return Result<IEnumerable<MinimalPost>>.Failure(ResponseMessages.USER_NOT_FOUND);
         }
 
-        var bookmarkedPosts = await _dataStore.BookmarkedPosts.GetByCriteriaAsync(bp => bp.UserId == userId, bp => bp.UserId);
+        var bookmarkedPosts = await _dataStore.BookmarkedPosts.GetByCriteriaAsync(bp => bp.UserId == realUserId, bp => bp.UserId);
 
-        if (!bookmarkedPosts.ValueList.Any())
-        {
-            return Result<IEnumerable<MinimalPost>>.Failure(DbErrors.NotFoundError.ToString() + " Bookmarked Posts");
-        }
-
-        var posts = await _dataStore.MinimalPosts.GetMinimalPostsBookmarkedAsync(userId, 1, 6);
+        var posts = await _dataStore.MinimalPosts.GetMinimalPostsBookmarkedAsync(realUserId, 1, 6);
 
         return Result<IEnumerable<MinimalPost>>.Success(posts);
     }
     public async Task<Result<IEnumerable<MinimalPost>>> GetRecommendedPostsByPostAsync(string postId)
     {
-        var realPostId = handlePostId(postId);
+        var realPostId = _protectionHandler.GetRealPostId(postId);
 
         if (realPostId == -1)
         {
-            return Result<IEnumerable<MinimalPost>>.Failure(ResponseMessages.DATA_SENT_MANIPULATED);
+            return Result<IEnumerable<MinimalPost>>.Failure(ResponseMessages.POST_NOT_FOUND);
         }
 
         var postsScores = await _recommendationService.GetRecommendedPostsIdsForPost(realPostId);
@@ -234,9 +214,9 @@ public class PostService(IDataStore _dataStore,
 
         return Result<IEnumerable<MinimalPost>>.Success(data);
     }
-    public async Task<Result<IEnumerable<MinimalPost>>> GetPostsOrderedByViews(int pageSize, int pageNumber)
+    public async Task<Result<IEnumerable<MinimalPost>>> GetPostsOrderedByViews(PagedRequest request)
     {
-        var result = await _dataStore.MinimalPosts.GetPostsOrderedByViews(pageSize, pageNumber);
+        var result = await _dataStore.MinimalPosts.GetPostsOrderedByViews(request.PageSize, request.PageNumber);
         return Result<IEnumerable<MinimalPost>>.Success(result);
     }
     public async Task<Result<IEnumerable<CategoryPostsCountResponse>>> GetPostsCountByCategoryAsync()
@@ -255,10 +235,16 @@ public class PostService(IDataStore _dataStore,
 
         return Result<IEnumerable<TagPostsCountResponse>>.Success(values);
     }
-
+    public async Task<PagedResponse<Post>> Check()
+    {
+        var result = await _dataStore.Posts.GetAsync();
+        var response = PagedResponse<Post>.Create(result.ValueList, result.PageSize, result.CurrentPage, result.TotalPages);
+        return response;
+    }
     private async Task<string> UploadImageFileToServerAsync(IFormFile image, bool isMainImage)
     {
         string imageName = Guid.NewGuid().ToString() + Path.GetFileName(image.FileName);
+      
         string imagePath = string.Empty;
         
         if (isMainImage)
@@ -272,36 +258,66 @@ public class PostService(IDataStore _dataStore,
 
         return imagePath;
     }
-
     private string injectImageUrlsInContent(string content, string newPath, string imageKey)
     {
         content = content.Replace(imageKey, newPath);
 
         return content;
     }
-    private int handlePostId(string id)
-    {
-        try
-        {
-            return int.Parse(_protectors["postId"].Unprotect(id));
-        }
-        catch (Exception ex)
-        {
-            if (ex is CryptographicException)
-            {
-                return -2;
-            }
-            else if (ex is FormatException)
-            {
-                return -3;
-            }
-            else if (ex is OverflowException)
-            {
-                return -4;
-            }
-            _logger.LogError(ex.Message);
-            return -1;
-        }
-    }
 
+    private PostDetailsResponse GetPostDetailsResponse(Post post)
+    {
+        var response = new PostDetailsResponse
+        {
+            PostId = _protectionHandler.GetProtectedPostId(post.Id),
+            ViewsCount = post.ViewsCount,
+            Reacts = post.Reactions!.Count(),
+            Title = post.Title,
+            Slug = post.Slug,
+            Content = post.Content,
+            AuthorId = _protectionHandler.GetProtectedUserId(post.AuthorId),
+            Summary = post.Summary,
+            MainImageUrl = post.MainImageUrl,
+            AuthorName = post.Author.FirstName + " " + post.Author.LastName,
+            Tags = post.Tags.Select(t => t.Name).ToArray(),
+            CategoryId = post.CategoryId,
+            CategoryName = post.Category.Name,
+            AuthorImageUrl = post.Author.ProfileImageUrl,
+            AuthorJobTitle = post.Author.JobTitle,
+            PublishedAt = post.PublishedAt
+        };
+        return response;
+    }
+    public async Task<SimpleResult<bool>> EditPostAsync(EditPostRequest request)
+    {
+        var realPostId = _protectionHandler.GetRealPostId(request.PostId);
+
+        if (realPostId == -1)
+        {
+            return SimpleResult<bool>.Failure(ResponseMessages.POST_NOT_FOUND);
+        }
+
+        var post = await _dataStore.Posts.GetByIdAsync(realPostId);
+
+        if (post == null)
+        {
+            return SimpleResult<bool>.Failure(ResponseMessages.POST_NOT_FOUND);
+        }
+
+        if (!string.IsNullOrEmpty(request.Title))
+        {
+            post.Title = request.Title;
+        }
+
+        //if (!string.IsNullOrEmpty(request.MainImage))
+        //{
+        //    post.Title = request.Title;
+        //}
+
+        _dataStore.Posts.UpdateItem(post);
+
+        await _dataStore.CompleteAsync();
+
+        return SimpleResult<bool>.Success(true);
+    }
 }
