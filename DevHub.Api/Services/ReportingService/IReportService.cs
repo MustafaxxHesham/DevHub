@@ -19,4 +19,3 @@ public interface IReportService
     Task<SimpleResult<bool>> MarkReportAsViewedAsync(string reportId);
     Task<SimpleResult<bool>> DeleteReportAsync(string reportId);
 }
-    

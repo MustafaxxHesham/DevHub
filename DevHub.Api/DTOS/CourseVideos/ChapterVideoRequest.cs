@@ -1,5 +1,5 @@
 ﻿namespace DevHub.DTOS.CourseVideos;
-public record class ChapterVideoRequest(IFormFile CourseVide,
+public record class ChapterVideoRequest(IFormFile CourseVideo,
     int Order,
     bool IsPreview,
     bool ExtractTitleFromVideoName,

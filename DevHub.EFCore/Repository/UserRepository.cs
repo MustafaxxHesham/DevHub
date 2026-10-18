@@ -1,4 +1,5 @@
-﻿using DevHub.Domain.Helpers;
+﻿using DevHub.Domain.Enums;
+using DevHub.Domain.Helpers;
 using DevHub.Domain.LogicContract.RepositoryContract;
 using DevHub.Domain.Models;
 using DevHub.EFCore.EFCorePaginationHelper;
@@ -130,5 +131,27 @@ public class UserRepository(AppDbContext _context) : BaseRepository<User, int>(_
                                             .OrderBy(x => x.UserId);
 
         return await PagedResponse<ExternalLogin>.CreateAsync(query, pageSize, pageNumber);
+    }
+
+    public async Task<SubscriptionPlans> GetUserSubscriptionPlan(int userId)
+    {
+        // x => DateTime.UtcNow >= x.StartDate && DateTime.UtcNow <= x.EndDate;
+        var subscriptionPlanName = await _context.UserSubscriptions.Include(x => x.SubscriptionPlan)
+                        .Where(x => x.UserId == userId && DateTime.UtcNow >= x.StartDate && DateTime.UtcNow <= x.EndDate)
+                        .Select(x => x.SubscriptionPlan.Name)                
+                        .FirstOrDefaultAsync(default(CancellationToken));
+
+        if (string.IsNullOrEmpty(subscriptionPlanName))
+        {
+            return SubscriptionPlans.Free;
+        }
+
+        return (SubscriptionPlans)Enum.Parse(typeof(SubscriptionPlans), subscriptionPlanName);
+    }
+
+    public async Task<bool> IsUserAdmin(int id)
+    {
+        return await _context.Users.Include(x => x.Role)
+            .AnyAsync(x => x.Id == id && x.Role.RoleName == Roles.Admin.ToString());
     }
 }

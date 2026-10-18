@@ -8,6 +8,7 @@ public interface IAuthService
     Task<Result<AddUserResponse>> CreateUserAsync(AddUserRequest request);
     Task<Result<RefreshTokenLoginResponse>> AuthenticateByRefreshTokenAsync(string refreshToken);
     Task<SimpleResult<bool>> BlackListTokenAsync(string refreshToken);
+    Task<SimpleResult<bool>> ChangePasswordAsync(HandleForgotPasswordRequest request);
     Task<Result<string>> GenerateJwtTokenByUserId(int userId);
     Task<SimpleResult<bool>> IsEmailVerifiedAsync(string email);
     Task<SimpleResult<bool>> IsEmailExistedAsync(string email);

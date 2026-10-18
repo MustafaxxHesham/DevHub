@@ -55,11 +55,12 @@ public class BaseRepository<T, K>(AppDbContext _context) : IBaseRepository<T, K>
 
         return await query.ToListAsync();
     }
-    public async Task<IPagedList<T>> GetByCriteriaAsync(Expression<Func<T, bool>> criteria, 
+    public async Task<IPagedList<T>> GetByCriteriaAsync(Expression<Func<T, bool>> criteria,
         Expression<Func<T, object>> orderByCriteria,
-        [Optional] int? pageSize, 
+        [Optional] int? pageSize,
         [Optional] int? pageNumber,
-        [Optional] string[]? includeProps)
+        [Optional] string[]? includeProps,
+        Sorting sorting = Sorting.Ascending)
     {
         var query = _context.Set<T>().AsQueryable();
 
@@ -73,9 +74,32 @@ public class BaseRepository<T, K>(AppDbContext _context) : IBaseRepository<T, K>
             }
         }
 
-        query = query.OrderBy(orderByCriteria);
+        if (sorting == Sorting.Ascending)
+        {
+            query = query.OrderBy(orderByCriteria);
+        }
+        else
+        {
+            query = query.OrderByDescending(orderByCriteria);
+        }
 
-        var result = await PagedResponse<T>.CreateAsync(query, pageSize.Value, pageNumber.Value);
+        //if (orderByCriteriaList is not null && orderByCriteriaList.Any())
+        //{
+        //    if (orderByCriteriaList.Count() == 1)
+        //    {
+        //        query = (sorting == Sorting.Ascending) ? query.OrderBy(orderByCriteriaList.FirstOrDefault()) :
+        //            query.OrderByDescending(orderByCriteriaList.FirstOrDefault());
+        //    }
+        //    if (orderByCriteriaList.Count() > 2)
+        //    {
+        //        throw new Exception("Max Ordering Criteria is 2 Properties...");
+        //    }
+
+        //    query = (sorting == Sorting.Ascending) ? query.OrderBy(orderByCriteriaList[0]).ThenBy(orderByCriteriaList[1]) :
+        //                                            query.OrderByDescending(orderByCriteriaList[0]).ThenByDescending(orderByCriteriaList[1]);
+        //}
+
+        var result = await PagedResponse<T>.CreateAsync(query, pageSize!.Value, pageNumber!.Value);
 
         return result;
     }
@@ -112,7 +136,9 @@ public class BaseRepository<T, K>(AppDbContext _context) : IBaseRepository<T, K>
         return await _context.Set<T>().FindAsync(id);
             
     }
-    public async Task<IPagedList<T>> GetPaginatedAsync(int pageSize, int pageNumber, Expression<Func<T, object>> orderByCriteria, 
+    public async Task<IPagedList<T>> GetPaginatedAsync(int pageSize,
+        int pageNumber,
+        Expression<Func<T, object>> orderByCriteria, 
         [Optional] string[]? includeProps,
         Sorting orderingDirection = Sorting.Ascending)
     {
@@ -126,21 +152,43 @@ public class BaseRepository<T, K>(AppDbContext _context) : IBaseRepository<T, K>
             }
         }
 
-        if (orderingDirection == Sorting.Descending)
+        if (orderingDirection == Sorting.Ascending)
         {
-            query = query.OrderByDescending(orderByCriteria).AsQueryable();
+            query = query.OrderBy(orderByCriteria);
         }
         else
         {
-            query = query.OrderBy(orderByCriteria).AsQueryable();
+            query = query.OrderByDescending(orderByCriteria);
         }
+
+
+        //if (orderByCriteriaList is not null && orderByCriteriaList.Any())
+        //{
+        //    if (orderByCriteriaList.Count() == 1)
+        //    {
+        //        query = (orderingDirection == Sorting.Ascending) ? query.OrderBy(orderByCriteriaList.FirstOrDefault()) :
+        //            query.OrderByDescending(orderByCriteriaList.FirstOrDefault());
+        //    }
+        //    if (orderByCriteriaList.Count() > 2)
+        //    {
+        //        throw new Exception("Max Ordering Criteria is 2 Properties...");
+        //    }
+
+        //    query = (orderingDirection == Sorting.Ascending) ? query.OrderBy(orderByCriteriaList[0])
+        //                                                  .ThenBy(orderByCriteriaList[1]) :
+        //                                            query.OrderByDescending(orderByCriteriaList[0])
+        //                                                  .ThenByDescending(orderByCriteriaList[1]);
+        //}
 
         var result = await PagedResponse<T>.CreateAsync(query, pageSize, pageNumber);
 
         return result;
     }
-    public async Task<IPagedList<T>> GetPaginatedByCriteriaAsync(int pageSize, int pageNumber, Expression<Func<T, bool>> criteria, Expression<Func<T, object>> orderByCriteria, [Optional] string[]? includeProps
-        , Sorting sorting = Sorting.Ascending)
+    public async Task<IPagedList<T>> GetPaginatedByCriteriaAsync(int pageSize,
+        int pageNumber,
+        Expression<Func<T, bool>> criteria,
+        Expression<Func<T, object>> orderByCriteria, [Optional] string[]? includeProps
+        , Sorting orderingDirection = Sorting.Ascending)
     {
         var query = _context.Set<T>().AsQueryable();
 
@@ -154,11 +202,42 @@ public class BaseRepository<T, K>(AppDbContext _context) : IBaseRepository<T, K>
             }
         }
 
+
+        if (orderingDirection == Sorting.Ascending)
+        {
+            query = query.OrderBy(orderByCriteria);
+        }
+        else
+        {
+            query = query.OrderByDescending(orderByCriteria);
+        }
+
+
+
+        //if (orderByCriteriaList is not null && orderByCriteriaList.Any())
+        //{
+        //    if (orderByCriteriaList.Count() == 1)
+        //    {
+        //        query = (orderingDirection == Sorting.Ascending) ? query.OrderBy(orderByCriteriaList.FirstOrDefault()) :
+        //            query.OrderByDescending(orderByCriteriaList.FirstOrDefault());
+        //    }
+        //    if (orderByCriteriaList.Count() > 2)
+        //    {
+        //        throw new Exception("Max Ordering Criteria is 2 Properties...");
+        //    }
+
+        //    query = (orderingDirection == Sorting.Ascending) ? query.OrderBy(orderByCriteriaList[0])
+        //                                                  .ThenBy(orderByCriteriaList[1]) :
+        //                                            query.OrderByDescending(orderByCriteriaList[0])
+        //                                                  .ThenByDescending(orderByCriteriaList[1]);
+        //}
+
+
+
         var pagedList = await PagedResponse<T>.CreateAsync(query, pageSize, pageNumber);
 
         return pagedList;
     }
-
 
 
     // Counting Methods Signatures
@@ -170,8 +249,6 @@ public class BaseRepository<T, K>(AppDbContext _context) : IBaseRepository<T, K>
     {
         return await _context.Set<T>().Where(criteria).CountAsync();
     }
-    
-
     // Checking Methods Signatures
     public async Task<bool> IsExistAsync(K id)
     {

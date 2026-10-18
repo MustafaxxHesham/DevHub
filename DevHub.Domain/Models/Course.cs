@@ -7,10 +7,10 @@ public class Course
     public string CourseImageUrl { get; set; } = default!;
     public double Price { get; set; }
     public bool IsPublished { get; set; }
-    public int InstructorId { get; set; }
-    public User Instructor { get; set; }
     public int CategoryId { set; get; }
     public Category Category { get; set; }
+    public int InstructorId { get; set; }
+    public User Instructor { get; set; }
     public double Rate { 
         get
         {
@@ -25,7 +25,10 @@ public class Course
             throw new OverflowException("Rate is ranged from 1 to 5.");
         }
     }
+    public ICollection<WishList> WishLists { get; set; }
     public ICollection<Feedback> Feedbacks { get; set; }
     public ICollection<CourseChapter> CourseChapters { get; set; }
     public ICollection<CourseVideo> CourseVideos { get; set; }
+    public ICollection<UserCourse> UsersEnrolled { get; set; }
+    public ICollection<Offer>? Offers { get; set; }
 }

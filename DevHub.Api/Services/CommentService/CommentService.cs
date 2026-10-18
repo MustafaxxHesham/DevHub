@@ -1,44 +1,29 @@
 ﻿using DevHub.Domain.DataStoreContract;
-using DevHub.Domain.LogicContract;
 using DevHub.Domain.Models;
 using DevHub.Domain.Result;
 using DevHub.DTOS.Comments;
 using DevHub.EFCore.ErrorTypes;
 using DevHub.Responses;
 using DevHub.Utilities;
-using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 
 namespace DevHub.Services.CommentService;
 
-enum Keys
-{
-    UserId,
-    PostId,
-    CommentId
-}
-
-public class CommentService(ICommentRepository _commentRepo,
-                            IDataStore _dataStore,
-                            IDataProtectionProvider provider,
+public class CommentService(IDataStore _dataStore,
+                            ProtectionHandler _protectionHandler,
                             ILogger<CommentService> _logger) : ICommentService
 {
-    private readonly Dictionary<string, IDataProtector> _protectors = new()
-    {
-        [Keys.CommentId.ToString()] = provider.CreateProtector(ProtectionPurposes.COMMENT_ID_PURPOSE),
-        [Keys.PostId.ToString()] = provider.CreateProtector(ProtectionPurposes.POST_ID_PURPOSE),
-        [Keys.UserId.ToString()] = provider.CreateProtector(ProtectionPurposes.USER_ID_PURPOSE)
-    };
+
     public async Task<Result<Comment>> AddCommentAsync(SubmitCommentRequest request)
     {
-        int realPostId = getRealInt(request.PostId, Keys.PostId);
+        int realPostId = _protectionHandler.GetRealPostId(request.PostId);
 
         if (realPostId == -1)
         {
             return Result<Comment>.Failure(ResponseMessages.POST_NOT_FOUND);
         }
 
-        int realUserId = getRealInt(request.UserId, Keys.UserId);
+        int realUserId = _protectionHandler.GetRealUserId(request.UserId);
 
         if (realUserId == -1)
         {
@@ -52,7 +37,7 @@ public class CommentService(ICommentRepository _commentRepo,
             UserId = realUserId,
         };
 
-        await _commentRepo.AddAsync(comment);
+        await _dataStore.Comments.AddAsync(comment);
 
         await _dataStore.CompleteAsync();
         
@@ -60,20 +45,20 @@ public class CommentService(ICommentRepository _commentRepo,
     }
     public async Task<Result<Comment>> AddReplyToCommentAsync(SubmitCommentRequest request)
     {
-        var realParentCommentId = getRealInt(request.ParentCommentId!, Keys.CommentId);
+        var realParentCommentId = _protectionHandler.GetRealCommentId(request.ParentCommentId!);
 
         if (realParentCommentId == -1 || !await _dataStore.Comments.IsExistAsync(realParentCommentId))
         {
             return Result<Comment>.Failure(ResponseMessages.COMMENT_NOT_FOUND);
         }
 
-        var parentComment = await _commentRepo.GetByIdAsync(realParentCommentId);
+        var parentComment = await _dataStore.Comments.GetByIdAsync(realParentCommentId);
 
         if (parentComment == null) {
             return Result<Comment>.Failure(ResponseMessages.COMMENT_NOT_FOUND);
         }
 
-        int realPostId = getRealInt(request.PostId, Keys.PostId);
+        int realPostId = _protectionHandler.GetRealPostId(request.PostId);
 
         if (realPostId == -1 || !await _dataStore.Posts.IsExistAsync(realPostId))
         {
@@ -81,7 +66,7 @@ public class CommentService(ICommentRepository _commentRepo,
         }
 
 
-        int realUserId = getRealInt(request.UserId, Keys.UserId);
+        int realUserId = _protectionHandler.GetRealUserId(request.UserId);
 
         if (realUserId == -1 || !await _dataStore.Users.IsExistAsync(realUserId))
         {
@@ -97,7 +82,7 @@ public class CommentService(ICommentRepository _commentRepo,
             WrittenAt = DateTime.UtcNow
         };
 
-        await _commentRepo.AddAsync(comment);
+        await _dataStore.Comments.AddAsync(comment);
 
         if (await _dataStore.CompleteAsync() > 0)
             return Result<Comment>.Success(comment);
@@ -107,14 +92,14 @@ public class CommentService(ICommentRepository _commentRepo,
     }
     public async Task<SimpleResult<bool>> DeleteCommentAsync(int commentId)
     {
-        var comment = await _commentRepo.GetByCriteriaFirstAsync(c => c.Id == commentId);
+        var comment = await _dataStore.Comments.GetByCriteriaFirstAsync(c => c.Id == commentId);
         
         if (comment is null)
         {
             return SimpleResult<bool>.Failure(ResponseMessages.COMMENT_NOT_FOUND);
         }
         
-        _commentRepo.RemoveItem(comment);
+        _dataStore.Comments.RemoveItem(comment);
         
         await _dataStore.CompleteAsync();
 
@@ -122,7 +107,7 @@ public class CommentService(ICommentRepository _commentRepo,
     }
     public async Task<SimpleResult<bool>> EditCommentAsync(string newContent, int commentId)
     {
-        var oldComment = await _commentRepo.GetByIdAsync(commentId);
+        var oldComment = await _dataStore.Comments.GetByIdAsync(commentId);
         
         if (oldComment is null)
         {
@@ -133,7 +118,7 @@ public class CommentService(ICommentRepository _commentRepo,
 
         oldComment.IsEdited = true;
 
-        _commentRepo.UpdateItem(oldComment);
+        _dataStore.Comments.UpdateItem(oldComment);
 
         await _dataStore.CompleteAsync();
 
@@ -141,7 +126,7 @@ public class CommentService(ICommentRepository _commentRepo,
     }
     public async Task<SimpleResult<int>> GetCommentsCount(string postId)
     {
-        var realPostId = getRealInt(postId, Keys.PostId);
+        var realPostId = _protectionHandler.GetRealPostId(postId);
 
         if (realPostId == -1 || !await _dataStore.Posts.IsExistAsync(realPostId))
         {
@@ -155,7 +140,7 @@ public class CommentService(ICommentRepository _commentRepo,
     public async Task<Result<IEnumerable<GetCommentResponse>>> GetTopCommentsAsync(KeyPagedRequest<int> request)
     {
         //To be Revisioned!!!
-        var comments = await  _commentRepo.GetTopCommentsAsync(request.Key, request.PageSize, 0)
+        var comments = await  _dataStore.Comments.GetTopCommentsAsync(request.Key, request.PageSize, 0)
             .GroupBy(c => c.ParentCommentId, (k, v) => new
             {
                 Key = k.GetValueOrDefault(0),
@@ -172,19 +157,5 @@ public class CommentService(ICommentRepository _commentRepo,
             .ToListAsync();
 
         return Result<IEnumerable<GetCommentResponse>>.Success(comments);
-    }
-
-
-    private int getRealInt(string protectedId, Keys key)
-    {
-        try
-        {
-            return int.Parse(_protectors[key.ToString()].Unprotect(protectedId));
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError($"Error Around Id Of {key.ToString()} With Value {protectedId}");
-            return -1;
-        }
     }
 }

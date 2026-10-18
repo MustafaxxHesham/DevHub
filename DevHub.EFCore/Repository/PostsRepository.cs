@@ -23,15 +23,37 @@ public class PostsRepository(AppDbContext _context) : BaseRepository<Post, int>(
         await _context.Database.CommitTransactionAsync();
     }
 
-    public IQueryable<Post> GetPostDetailsAsync()
+    public async Task<Post?> GetPostDetailsAsync(int postId)
     {
-        
-        var query = _context.Posts.Include(p => p.Tags)
-                                  .Include(p => p.Author)
-                                  .Include(p => p.Comments)
-                                  .AsQueryable();
 
-        return query;
+        return await _context.Posts.Where(p => p.Id == postId)   
+                             .Include(p => p.Tags)
+                             .Include(p => p.Reactions)
+                             .Include(p => p.Category)
+                             .Include(p => p.Author)
+                             .Select(post => new Post
+                             {
+                                 Id = post.Id,
+                                 ViewsCount = post.ViewsCount,
+                                 Title = post.Title,
+                                 Slug = post.Slug,
+                                 PublishedAt = post.PublishedAt,
+                                 MainImageUrl = post.MainImageUrl,
+                                 Content = post.Content,
+                                 AuthorId = post.AuthorId,
+                                 Category = post.Category,
+                                 Summary = post.Summary,
+                                 CategoryId = post.CategoryId,
+                                 Reactions = post.Reactions,
+                                 Author = new User
+                                 {
+                                     Id = post.Author.Id,
+                                     FirstName = post.Author.FirstName,
+                                     LastName = post.Author.LastName,
+                                     JobTitle = post.Author.JobTitle,
+                                     ProfileImageUrl = post.Author.ProfileImageUrl,
+                                 }
+                             }).FirstOrDefaultAsync();
     }
 
     public Task<IQueryable<Post>> GetPostsByCategoryAsync(string category)
@@ -94,14 +116,15 @@ public class PostsRepository(AppDbContext _context) : BaseRepository<Post, int>(
     public Task<DateTime> GetLastPostDateForUserAsync(int userId)
     {
         return _context.Posts.OrderByDescending(p => p.CreatedAt)
-                            .Where(x => x.AuthorId == userId)
-                            .Select(x => x.CreatedAt)
-                            .FirstOrDefaultAsync();
+                                .Where(x => x.AuthorId == userId)
+                                .Select(x => x.CreatedAt)
+                                .FirstOrDefaultAsync();
     }
 
     public async Task<IPagedList<Post>> GetAsync()
     {
         var query = _context.Posts.Include(p => p.Tags)
+                                  .Include(p => p.Category)
                                   .Include(p => p.Author)
                                   .Select(post => new Post
                                   {
@@ -109,6 +132,7 @@ public class PostsRepository(AppDbContext _context) : BaseRepository<Post, int>(
                                       Title = post.Title,
                                       AuthorId = post.AuthorId,
                                       Slug = post.Slug,
+                                      Category = post.Category,
                                       Reactions = post.Reactions,
                                       PublishedAt = post.PublishedAt,
                                       MainImageUrl = post.MainImageUrl,

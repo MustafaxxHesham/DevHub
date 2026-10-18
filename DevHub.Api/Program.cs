@@ -5,7 +5,7 @@ using DevHub.Utilities;
 using Hangfire;
 using Hangfire.SqlServer;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -48,7 +48,9 @@ builder.Services.AddEndpointsApiExplorer();
 
 builder.Services.AddSwaggerGen();
 
-builder.Services.AddDataProtection();
+builder.Services.AddDataProtection()
+                .PersistKeysToFileSystem(new DirectoryInfo("/var/DevHub/data-protection-keys"))
+                .SetApplicationName("DevHub");
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, new ConfigJwt(builder.Configuration).Configure);

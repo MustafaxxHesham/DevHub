@@ -17,7 +17,7 @@ public class PaginationValidator : ActionFilterAttribute, IAsyncActionFilter
                 int pageNumber = int.Parse(valueOfPageNumber!);
                 string errorMessage = string.Empty;
 
-                errorMessage += (pageSize < 0 || pageSize > 6) ? "Page size minimum is 1 and max is 6 \n" : "";
+                errorMessage += (pageSize < 0 || pageSize > 12) ? "Page size minimum is 1 and max is 6 \n" : "";
                 errorMessage += (pageNumber < 0) ? "page number must be postive number." : "";
                 var problemDetails = new ProblemDetails
                 {
@@ -31,7 +31,9 @@ public class PaginationValidator : ActionFilterAttribute, IAsyncActionFilter
                     await context.HttpContext.Response.WriteAsJsonAsync(problemDetails);
                 }
                 else
+                {
                     await next();
+                }
             }
             else
             {

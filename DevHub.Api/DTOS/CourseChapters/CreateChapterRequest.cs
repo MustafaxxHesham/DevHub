@@ -1,3 +1,6 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using DevHub.DTOS.Common;
 namespace DevHub.DTOS.CourseChapters;
-public record class CreateChapterRequest(string Title, string Description,[FromRoute(Name = "courseId")] string CourseId);
+public record class CreateChapterRequest(string Title, 
+    int ChapterNumber,
+    string Description,
+    string CourseId) : CourseOwner(CourseId);

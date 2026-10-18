@@ -2,4 +2,5 @@
     <Project Path="DevHub.Api/DevHub.Api.csproj" />
     <Project Path="DevHub.Domain/DevHub.Domain.csproj" />
     <Project Path="DevHub.EFCore/DevHub.EFCore.csproj" />
+    <Project Path="RecommendationSystem/RecommendationSystem.csproj" Id="4f7ee4ab-571d-40d6-9564-b40c429b9d85" />
 </Solution>

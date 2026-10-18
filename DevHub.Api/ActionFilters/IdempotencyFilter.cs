@@ -7,11 +7,10 @@ using Newtonsoft.Json;
 
 namespace DevHub.ActionFilters;
 
-public class IdempontencyFilter : ActionFilterAttribute, IAsyncActionFilter
+public class IdempotencyAttribute : ActionFilterAttribute, IAsyncActionFilter
 {
     public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
     {
-
         var _cache = context.HttpContext.RequestServices.GetRequiredService<IDistributedCache>();
 
         var key = context.HttpContext.Request.Headers["X-Idempotency-Key"];
@@ -69,6 +68,7 @@ public class IdempontencyFilter : ActionFilterAttribute, IAsyncActionFilter
                 var result = new ObjectResult("Your request has already been processed");
                 context.HttpContext.Response.StatusCode = 409; // Conflict
                 await context.HttpContext.Response.WriteAsJsonAsync(result);
+                await _cache.RemoveAsync(key);
                 return;
             }
 

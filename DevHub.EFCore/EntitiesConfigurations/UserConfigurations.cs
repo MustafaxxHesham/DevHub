@@ -23,6 +23,11 @@ public class UserConfigurations : IEntityTypeConfiguration<User>
         builder.HasMany(u => u.Permissions)
             .WithMany(p => p.Users)
             .UsingEntity<UserPermission>();
+
+        builder.HasMany(u => u.CoursesList)
+            .WithOne(c => c.Instructor)
+            .HasForeignKey(u => u.InstructorId);
+
     }
 }
 

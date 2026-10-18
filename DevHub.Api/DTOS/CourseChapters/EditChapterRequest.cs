@@ -1,3 +1,8 @@
-﻿namespace DevHub.DTOS.CourseChapters;
+﻿using Microsoft.AspNetCore.Mvc;
 
-public record class EditChapterRequest(string CourseId, string? Title, string? Description);
+namespace DevHub.DTOS.CourseChapters;
+
+public record class EditChapterRequest([FromRoute(Name = "courseId")]string CourseId,
+    string? Title, 
+    string? Description,
+    int? ChapterOrder);

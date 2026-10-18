@@ -14,6 +14,7 @@ public class User : ISoftDeletable
     public bool IsActive { get; set; }
     public bool IsEmailVerified { get; set; }
     public DateTime CreatedAt { get; set; }
+    public DateTime LastSignIn { get; set; }
     public Guid? Wallet { get; set; }
     public Wallet? WalletId { get; set; }
     public int RoleId { get; set; }
@@ -23,5 +24,8 @@ public class User : ISoftDeletable
     public ICollection<Permission>? Permissions { get; set; }
     public ICollection<UserSubscription>? UserSubscriptions { get; set; }
     public ICollection<BookmarkedPost>? BookmarkedPosts { get; set; }
+    public ICollection<Course>? CoursesList { get; set; }
+    public ICollection<UserCourse>? EnrolledCourses { get; set; }
+    public ICollection<WishList>? WishLists { get; set; }
     public bool IsDeleted { get; set; } = false;
 }

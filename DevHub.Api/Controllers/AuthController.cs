@@ -85,14 +85,25 @@ public class AuthController(IAuthService _authService, ILogger<AuthController> _
     public async Task<ActionResult> HandleForgotPassword(HandleForgotPasswordRequest request)
     {
         if (!await _dataStore.Users.IsEmailExistAsync(request.Email))
+        {
             return NotFound("Email isn't existed");
+        }
 
         var result = _tokenService.EnsureTokenForgotPassword(request.Email, request.Token, false);
 
         if (!result.IsSuccess)
+        {
             return BadRequest(result.Error);
+        }
 
-        throw new NotImplementedException();
+        var changePasswordResult = await _authService.ChangePasswordAsync(request);
+
+        if (!changePasswordResult.IsSuccess)
+        {
+            return NotFound(changePasswordResult.Error);
+        }
+
+        return Ok();
     }
 
     [HttpPost("extrenal-login")]
@@ -176,15 +187,7 @@ public class AuthController(IAuthService _authService, ILogger<AuthController> _
         return Unauthorized(result.Error);
     }
 
-
-
-    //[HttpPost("google")]
-    //public IActionResult ExternalLogin(UserExternalLogin request)
-    //{
-    //    throw new NotImplementedException();
-    //}
-
-
+    
     //  Refresh Token <> Login generates(Access Token, Refresh Token, Profile Image, FullName)
     /*
         [HttpPost("custom-register")]

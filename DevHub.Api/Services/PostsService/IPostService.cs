@@ -1,5 +1,4 @@
-﻿using DevHub.Domain.Helpers;
-using DevHub.Domain.Models;
+﻿using DevHub.Domain.Models;
 using DevHub.Domain.Result;
 using DevHub.DTOS.Commons;
 using DevHub.DTOS.Posts;
@@ -23,4 +22,5 @@ public interface IPostService
     Task<Result<IEnumerable<MinimalPost>>> GetPostsOrderedByViews(PagedRequest request);
     Task<Result<IEnumerable<MinimalPost>>> GetRecommendedPostsByPostAsync(string postId);
     //    Task<bool> ValidatePost(AddPostRequest req);
+    //    Ensure validation of images & content versus Sexual & Violation Content.
 }

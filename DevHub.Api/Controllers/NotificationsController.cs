@@ -13,7 +13,7 @@ public class NotificationsController : ControllerBase
     }
 
     [HttpDelete]
-    public async Task<ActionResult> DeleteNotification([FromQuery(Name = "notificationId")]string notificationId)
+    public async Task<ActionResult> DeleteNotification([FromQuery(Name = "notificationId")]string notificationId, CancellationToken cancellationToken)
     {
         throw new NotImplementedException();
     }
@@ -32,6 +32,12 @@ public class NotificationsController : ControllerBase
 
     [HttpGet("{userId}/not-viewed")]
     public async Task<ActionResult> GetCount()
+    {
+        throw new NotImplementedException();
+    }
+
+    [HttpPost]
+    public async Task<ActionResult> NotifyAllUsers()
     {
         throw new NotImplementedException();
     }

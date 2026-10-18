@@ -7,7 +7,6 @@ using DevHub.DTOS.Posts;
 using DevHub.Responses;
 using DevHub.Utilities;
 using Microsoft.AspNetCore.DataProtection;
-using Microsoft.EntityFrameworkCore;
 
 namespace DevHub.Services.PostsService;
 public class PostService(IDataStore _dataStore, IWebHostEnvironment _env, 
@@ -18,24 +17,23 @@ public class PostService(IDataStore _dataStore, IWebHostEnvironment _env,
 
     public async Task<Result<PostDetailsResponse>> GetPostInDetailAsync(string id)
     {
-        //var realPostId = _protectionHandler.GetRealPostId(id);
+        var realPostId = _protectionHandler.GetRealPostId(id);
 
-        //if (realPostId == -1 || !await _dataStore.Posts.IsExistAsync(realPostId))
-        //{
-        //    return Result<PostDetailsResponse>.Failure(ResponseMessages.POST_NOT_FOUND);
-        //}
+        if (realPostId == -1)
+        {
+            return Result<PostDetailsResponse>.Failure(ResponseMessages.POST_NOT_FOUND);
+        }
 
-        var post = await _dataStore.Posts.GetAsync();
+        var post = await _dataStore.Posts.GetPostDetailsAsync(realPostId);
 
         if (post is null)
         {
             return Result<PostDetailsResponse>.Failure(ResponseMessages.POST_NOT_FOUND);
         }
-
-        throw new NotImplementedException();
-        //var response = GetPostDetailsResponse(post);
         
-        //return Result<PostDetailsResponse>.Success(response);
+        var response = GetPostDetailsResponse(post);
+        
+        return Result<PostDetailsResponse>.Success(response);
     }
     public async Task<SimpleResult<int>> CreatePostAsync(AddPostRequest request)
     {
@@ -46,26 +44,15 @@ public class PostService(IDataStore _dataStore, IWebHostEnvironment _env,
             return SimpleResult<int>.Failure("Error About Getting Id.");//Error to be revisioned
         }
 
-        var post = new Post
-        {
-            AuthorId = realUserId,
-            Slug = request.Slug,
-            Status = request.Status,
-            Tags = request.Tags,
-            CategoryId = 0,
-            Summary = request.Summary,
-            Content = request.Content,
-            MainImageUrl = await UploadImageFileToServerAsync(request.MainImageUrl, true),
-            ViewsCount = 0,
-            CreatedAt = DateTime.UtcNow,
-        };
+        var post = await GetPostFromCreatePostRequest(request, realUserId);
+
 
         List<PostImage> postImage = new List<PostImage>();
 
         for (int i = 0; i < request.PostImages.Count; i++)
         {
             postImage[i].ImageUrl = await UploadImageFileToServerAsync(request.PostImages.ElementAt(i), false);
-            injectImageUrlsInContent(post.Content, postImage[i].ImageUrl, request.ImagesKey[i]);
+            InjectImageUrlsInContent(post.Content, postImage[i].ImageUrl, request.ImagesKey[i]);
         }
 
         post.PostImages = postImage;
@@ -193,7 +180,8 @@ public class PostService(IDataStore _dataStore, IWebHostEnvironment _env,
 
         var bookmarkedPosts = await _dataStore.BookmarkedPosts.GetByCriteriaAsync(bp => bp.UserId == realUserId, bp => bp.UserId);
 
-        var posts = await _dataStore.MinimalPosts.GetMinimalPostsBookmarkedAsync(realUserId, 1, 6);
+        var posts = await _dataStore.MinimalPosts.GetMinimalPostsBookmarkedAsync(realUserId, request.PageNumber,
+            request.PageSize);
 
         return Result<IEnumerable<MinimalPost>>.Success(posts);
     }
@@ -241,6 +229,7 @@ public class PostService(IDataStore _dataStore, IWebHostEnvironment _env,
         var response = PagedResponse<Post>.Create(result.ValueList, result.PageSize, result.CurrentPage, result.TotalPages);
         return response;
     }
+
     private async Task<string> UploadImageFileToServerAsync(IFormFile image, bool isMainImage)
     {
         string imageName = Guid.NewGuid().ToString() + Path.GetFileName(image.FileName);
@@ -258,13 +247,27 @@ public class PostService(IDataStore _dataStore, IWebHostEnvironment _env,
 
         return imagePath;
     }
-    private string injectImageUrlsInContent(string content, string newPath, string imageKey)
+    private void InjectImageUrlsInContent(string content, string newPath, string imageKey)
     {
         content = content.Replace(imageKey, newPath);
-
-        return content;
     }
+    private async Task<Post> GetPostFromCreatePostRequest(AddPostRequest request, int userId)
+    {
+        return new Post
+        {
+            AuthorId = userId,
+            Slug = request.Slug,
+            Status = request.Status,
+            Tags = request.Tags,
+            CategoryId = 0,
+            Summary = request.Summary,
+            Content = request.Content,
+            MainImageUrl = await UploadImageFileToServerAsync(request.MainImageUrl, true),
+            ViewsCount = 0,
+            CreatedAt = DateTime.UtcNow,
+        };
 
+    }
     private PostDetailsResponse GetPostDetailsResponse(Post post)
     {
         var response = new PostDetailsResponse
@@ -279,7 +282,7 @@ public class PostService(IDataStore _dataStore, IWebHostEnvironment _env,
             Summary = post.Summary,
             MainImageUrl = post.MainImageUrl,
             AuthorName = post.Author.FirstName + " " + post.Author.LastName,
-            Tags = post.Tags.Select(t => t.Name).ToArray(),
+            Tags = [],
             CategoryId = post.CategoryId,
             CategoryName = post.Category.Name,
             AuthorImageUrl = post.Author.ProfileImageUrl,
@@ -304,15 +307,21 @@ public class PostService(IDataStore _dataStore, IWebHostEnvironment _env,
             return SimpleResult<bool>.Failure(ResponseMessages.POST_NOT_FOUND);
         }
 
-        if (!string.IsNullOrEmpty(request.Title))
-        {
-            post.Title = request.Title;
-        }
+        post.Title = string.IsNullOrEmpty(request.Title) ? post.Title : request.Title;
+        post.Summary = string.IsNullOrEmpty(request.Summary) ? post.Summary : request.Summary;
 
-        //if (!string.IsNullOrEmpty(request.MainImage))
-        //{
-        //    post.Title = request.Title;
-        //}
+        if(!post.Content.Equals(request.Content))
+        {
+            if (request.ImagesKey.Any())
+            {
+                // Require Revision as it contains bugs.
+                for (int i = 0; i < request.PostImages.Count; i++)
+                {
+                    var path = await UploadImageFileToServerAsync(request.PostImages.ElementAt(i), false);
+                    InjectImageUrlsInContent(request.Content, path, request.ImagesKey[i]);
+                }
+            }
+        }
 
         _dataStore.Posts.UpdateItem(post);
 

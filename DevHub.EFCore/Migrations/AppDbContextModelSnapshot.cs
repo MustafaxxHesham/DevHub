@@ -22,6 +22,21 @@ namespace DevHub.EFCore.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("CourseOffer", b =>
+                {
+                    b.Property<int>("CoursesId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("OffersId")
+                        .HasColumnType("int");
+
+                    b.HasKey("CoursesId", "OffersId");
+
+                    b.HasIndex("OffersId");
+
+                    b.ToTable("CourseOffer");
+                });
+
             modelBuilder.Entity("DevHub.Domain.Models.BookmarkedPost", b =>
                 {
                     b.Property<int>("UserId")
@@ -358,6 +373,9 @@ namespace DevHub.EFCore.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<bool>("IsPublished")
+                        .HasColumnType("bit");
+
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -435,6 +453,9 @@ namespace DevHub.EFCore.Migrations
                     b.Property<int>("CourseId")
                         .HasColumnType("int");
 
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<short>("Rate")
                         .HasColumnType("smallint");
 
@@ -487,6 +508,33 @@ namespace DevHub.EFCore.Migrations
                     b.ToTable((string)null);
 
                     b.ToView(null, (string)null);
+                });
+
+            modelBuilder.Entity("DevHub.Domain.Models.Offer", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<double>("DiscountValue")
+                        .HasColumnType("float");
+
+                    b.Property<DateTimeOffset>("EndDate")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset>("StartDate")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("Offer");
                 });
 
             modelBuilder.Entity("DevHub.Domain.Models.Permission", b =>
@@ -1561,6 +1609,9 @@ namespace DevHub.EFCore.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<DateTime>("LastSignIn")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("PasswordHashed")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -1580,6 +1631,67 @@ namespace DevHub.EFCore.Migrations
                     b.HasIndex("RoleId");
 
                     b.ToTable("Users");
+                });
+
+            modelBuilder.Entity("DevHub.Domain.Models.UserCourse", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("CourseId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("EnrolledAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.Property<double>("WatchedPercentage")
+                        .HasColumnType("float");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CourseId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("UsersCourses");
+                });
+
+            modelBuilder.Entity("DevHub.Domain.Models.UserCourseTrack", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("ChapterId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("UserCourseId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("VideoId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime>("WatchedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ChapterId");
+
+                    b.HasIndex("UserCourseId");
+
+                    b.HasIndex("VideoId");
+
+                    b.ToTable("UserCourseTrack");
                 });
 
             modelBuilder.Entity("DevHub.Domain.Models.UserFollower", b =>
@@ -1671,6 +1783,51 @@ namespace DevHub.EFCore.Migrations
                     b.ToTable("Wallets");
                 });
 
+            modelBuilder.Entity("DevHub.Domain.Models.WishList", b =>
+                {
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("CourseId")
+                        .HasColumnType("int");
+
+                    b.HasKey("UserId", "CourseId");
+
+                    b.HasIndex("CourseId");
+
+                    b.ToTable("WishLists");
+                });
+
+            modelBuilder.Entity("OfferSubscriptionPlan", b =>
+                {
+                    b.Property<int>("OffersId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("SubscriptionPlansId")
+                        .HasColumnType("int");
+
+                    b.HasKey("OffersId", "SubscriptionPlansId");
+
+                    b.HasIndex("SubscriptionPlansId");
+
+                    b.ToTable("OfferSubscriptionPlan");
+                });
+
+            modelBuilder.Entity("CourseOffer", b =>
+                {
+                    b.HasOne("DevHub.Domain.Models.Course", null)
+                        .WithMany()
+                        .HasForeignKey("CoursesId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("DevHub.Domain.Models.Offer", null)
+                        .WithMany()
+                        .HasForeignKey("OffersId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("DevHub.Domain.Models.BookmarkedPost", b =>
                 {
                     b.HasOne("DevHub.Domain.Models.Post", "Post")
@@ -1720,7 +1877,7 @@ namespace DevHub.EFCore.Migrations
                         .IsRequired();
 
                     b.HasOne("DevHub.Domain.Models.User", "Instructor")
-                        .WithMany()
+                        .WithMany("CoursesList")
                         .HasForeignKey("InstructorId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -1784,6 +1941,17 @@ namespace DevHub.EFCore.Migrations
                         .IsRequired();
 
                     b.Navigation("Course");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("DevHub.Domain.Models.Offer", b =>
+                {
+                    b.HasOne("DevHub.Domain.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("User");
                 });
@@ -1954,6 +2122,52 @@ namespace DevHub.EFCore.Migrations
                     b.Navigation("Role");
                 });
 
+            modelBuilder.Entity("DevHub.Domain.Models.UserCourse", b =>
+                {
+                    b.HasOne("DevHub.Domain.Models.Course", "Course")
+                        .WithMany("UsersEnrolled")
+                        .HasForeignKey("CourseId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("DevHub.Domain.Models.User", "User")
+                        .WithMany("EnrolledCourses")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Course");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("DevHub.Domain.Models.UserCourseTrack", b =>
+                {
+                    b.HasOne("DevHub.Domain.Models.CourseChapter", "Chapter")
+                        .WithMany()
+                        .HasForeignKey("ChapterId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("DevHub.Domain.Models.UserCourse", "UserCourse")
+                        .WithMany("UserCourseTrackers")
+                        .HasForeignKey("UserCourseId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("DevHub.Domain.Models.CourseVideo", "Video")
+                        .WithMany()
+                        .HasForeignKey("VideoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Chapter");
+
+                    b.Navigation("UserCourse");
+
+                    b.Navigation("Video");
+                });
+
             modelBuilder.Entity("DevHub.Domain.Models.UserFollower", b =>
                 {
                     b.HasOne("DevHub.Domain.Models.User", "FollowedUser")
@@ -2018,6 +2232,40 @@ namespace DevHub.EFCore.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("DevHub.Domain.Models.WishList", b =>
+                {
+                    b.HasOne("DevHub.Domain.Models.Course", "Course")
+                        .WithMany("WishLists")
+                        .HasForeignKey("CourseId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("DevHub.Domain.Models.User", "User")
+                        .WithMany("WishLists")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Course");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("OfferSubscriptionPlan", b =>
+                {
+                    b.HasOne("DevHub.Domain.Models.Offer", null)
+                        .WithMany()
+                        .HasForeignKey("OffersId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("DevHub.Domain.Models.SubscriptionPlan", null)
+                        .WithMany()
+                        .HasForeignKey("SubscriptionPlansId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("DevHub.Domain.Models.Category", b =>
                 {
                     b.Navigation("Courses");
@@ -2032,6 +2280,10 @@ namespace DevHub.EFCore.Migrations
                     b.Navigation("CourseVideos");
 
                     b.Navigation("Feedbacks");
+
+                    b.Navigation("UsersEnrolled");
+
+                    b.Navigation("WishLists");
                 });
 
             modelBuilder.Entity("DevHub.Domain.Models.CourseChapter", b =>
@@ -2068,6 +2320,10 @@ namespace DevHub.EFCore.Migrations
                 {
                     b.Navigation("BookmarkedPosts");
 
+                    b.Navigation("CoursesList");
+
+                    b.Navigation("EnrolledCourses");
+
                     b.Navigation("MyPosts");
 
                     b.Navigation("RefreshTokens");
@@ -2075,6 +2331,13 @@ namespace DevHub.EFCore.Migrations
                     b.Navigation("UserSubscriptions");
 
                     b.Navigation("WalletId");
+
+                    b.Navigation("WishLists");
+                });
+
+            modelBuilder.Entity("DevHub.Domain.Models.UserCourse", b =>
+                {
+                    b.Navigation("UserCourseTrackers");
                 });
 #pragma warning restore 612, 618
         }

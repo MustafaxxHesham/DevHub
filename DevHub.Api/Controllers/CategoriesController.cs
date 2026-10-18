@@ -4,10 +4,12 @@ using DevHub.EFCore.ErrorTypes;
 using DevHub.Services.CategoriesService;
 using Microsoft.AspNetCore.Mvc;
 namespace DevHub.Controllers;
+
 [ApiController]
 [Route("api/v1/categories")]
 public class CategoriesController(ICategoriesService _categoriesService) : ControllerBase
 {
+
     [HttpGet]
     public async Task<ActionResult<IEnumerable<HashedCategoryResponse>>> GetCategoriesAsync()
     {

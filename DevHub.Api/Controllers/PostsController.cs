@@ -1,6 +1,7 @@
 ﻿using DevHub.ActionFilters;
 using DevHub.AuthorizationPolicies;
 using DevHub.Domain.Models;
+using DevHub.DTOS.Commons;
 using DevHub.DTOS.Posts;
 using DevHub.EFCore.ErrorTypes;
 using DevHub.Responses;
@@ -14,30 +15,39 @@ namespace DevHub.Controllers;
 
 [ApiController]
 [Route("api/v1/posts/")]
-public class PostsController(IPostService _postService, ILogger<PostsController> _logger) : ControllerBase
+public class PostsController(IPostService _postService,
+    ILogger<PostsController> _logger) : ControllerBase
 {
 
     [HttpGet("test-minimal")]
-    public async Task<ActionResult<Post>> GetOne()
+    public async Task<ActionResult<IEnumerable<MinimalPost>>> GetOne()
     {
-        return Ok(await _postService.Check());
+        var result = await _postService.Check();
+        var postsList = new List<MinimalPost>();
+        foreach (var post in result.Values)
+        {
+            postsList.Add(new MinimalPost
+            {
+                Id = post.Id,
+                PostId = "minimalPost.PostId",
+                Title = post.Title,
+                FeatureImageUrl = post.MainImageUrl,
+                SecondaryText = post.Content,
+                AuthorName = post.Author.FirstName + " " + post.Author.LastName,
+                AuthorImageProfileUrl = post.Author.ProfileImageUrl,
+                Category = post.Category.Name,
+                FinalCount = result.TotalCount
+            });
+        }
+        return Ok(postsList);
     }
 
     //  Ensure that the post isn't for premium user subscribed
     [HttpGet("{query:alpha}")]
     [PaginationValidator]
-    public async Task<ActionResult<IEnumerable<MinimalPost>>> GetPostsByQuery(string query)
+    public async Task<ActionResult<IEnumerable<MinimalPost>>> GetPostsByQuery(KeyPagedRequest<string> request)
     {
-        if (string.IsNullOrEmpty(query) || query.Length == 1)
-            return BadRequest("");
-
-        int pageSize = int.Parse(HttpContext.Request.Headers["X-PageSize"]!);
-
-        int pageNumber = int.Parse(HttpContext.Request.Headers["X-PageNumber"]!);
-
-        var keyPagedRequest = KeyPagedRequest<string>.PagedRequestCreate(query, pageSize, pageNumber);
-
-        return Ok((await _postService.SearchPostsAsMinimalAsync(keyPagedRequest)).Value);
+        return Ok((await _postService.SearchPostsAsMinimalAsync(request)).Value);
     }
 
     [HttpGet("details/{postId}")]
@@ -47,11 +57,7 @@ public class PostsController(IPostService _postService, ILogger<PostsController>
 
         if (!result.IsSuccess)
         {
-            if (result.Error.Equals(ResponseMessages.POST_NOT_FOUND))
-            {
-                return NotFound(result);
-            }
-            return BadRequest(ResponseMessages.DATA_SENT_MANIPULATED);
+            return NotFound(ResponseMessages.POST_NOT_FOUND);
         }
 
         return Ok(result.Value);
@@ -59,20 +65,15 @@ public class PostsController(IPostService _postService, ILogger<PostsController>
 
     [HttpGet("{tagId}")]
     [PaginationValidator]
-    public async Task<ActionResult<IEnumerable<MinimalPost>>> GetByTag(string tagId)
+    public async Task<ActionResult<IEnumerable<MinimalPost>>> GetByTag(KeyPagedRequest<string> request)
     {
-        int pageSize = int.Parse(HttpContext.Request.Headers["X-PageSize"]!);
-
-        int pageNumber = int.Parse(HttpContext.Request.Headers["X-PageNumber"]!);
-
-        var keyedRequest = KeyPagedRequest<string>.PagedRequestCreate(tagId, pageSize, pageNumber);
-
-        var result = await _postService.GetPostsByTagAsync(keyedRequest);
+        var result = await _postService.GetPostsByTagAsync(request);
 
         if (!result.IsSuccess)
         {
             if (result.Error.Equals(DbErrors.NotFoundError.ToString()))
                 return NotFound(result.Error);
+
             return BadRequest(result.Error);
         }
 
@@ -81,15 +82,9 @@ public class PostsController(IPostService _postService, ILogger<PostsController>
 
     [HttpGet("{categoryId}")]
     [PaginationValidator]
-    public async Task<ActionResult<IEnumerable<MinimalPost>>> GetByCategory(string categoryId)
-    {
-        int pageSize = int.Parse(HttpContext.Request.Headers["X-PageSize"]!);
-
-        int pageNumber = int.Parse(HttpContext.Request.Headers["X-PageNumber"]!);
-
-        var keyedRequest = KeyPagedRequest<string>.PagedRequestCreate(categoryId, pageSize, pageNumber);
-        
-        var result = await _postService.GetPostsByCategoryAsync(keyedRequest);
+    public async Task<ActionResult<IEnumerable<MinimalPost>>> GetByCategory(KeyPagedRequest<string> request)
+    {        
+        var result = await _postService.GetPostsByCategoryAsync(request);
         
         if (!result.IsSuccess)
         {
@@ -116,14 +111,18 @@ public class PostsController(IPostService _postService, ILogger<PostsController>
     public async Task<ActionResult<IEnumerable<MinimalPost>>> PostsForUser()
     {
         var userIdInStr = User.Claims.FirstOrDefault(uc => uc.Type == ClaimTypes.NameIdentifier);
-        
+
         if (userIdInStr == null)
+        {
             return BadRequest();
+        }
 
         int userId = int.Parse(userIdInStr.Value ?? "0");
 
         if (userId == 0)
+        {
             return Unauthorized();  // Redirected To General Feed
+        }
 
         var result = await _postService.GetForYouPosts(userId);
 
@@ -236,8 +235,11 @@ public class PostsController(IPostService _postService, ILogger<PostsController>
         int pageSize = int.Parse(HttpContext.Request.Headers["X-PageSize"]!);
 
         int pageNumber = int.Parse(HttpContext.Request.Headers["X-PageNumber"]!);
+
+        // to be revised
+        int? lastId = int.Parse(HttpContext.Request.Headers?["X-LastId"].ToString() ?? "-1");
         
-        var result = await _postService.GetPostsOrderedByViews(new DTOS.Commons.PagedRequest(pageSize, pageNumber));
+        var result = await _postService.GetPostsOrderedByViews(new PagedRequest(pageSize, pageNumber, lastId));
         
         if (!result.IsSuccess)
         { 

@@ -1,4 +1,5 @@
-﻿using DevHub.Domain.Helpers;
+﻿using DevHub.Domain.Enums;
+using DevHub.Domain.Helpers;
 using DevHub.Domain.Models;
 namespace DevHub.Domain.LogicContract.RepositoryContract;
 public interface IUserRepository : IBaseRepository<User, int>
@@ -18,5 +19,7 @@ public interface IUserRepository : IBaseRepository<User, int>
     Task<IPagedList<ExternalLogin>> GetUsersGoogleAuth(int pageSize, int pageNumber);
     Task<IPagedList<ExternalLogin>> GetUsersGitHubAuth(int pageSize, int pageNumber);
     Task FollowUserAsync(UserFollower userFollower);
+    Task<SubscriptionPlans> GetUserSubscriptionPlan(int userId);
     Task<Dictionary<string, double>> GetAuthRatio();
+    Task<bool> IsUserAdmin(int id);
 }

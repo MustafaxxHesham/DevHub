@@ -6,6 +6,7 @@ using DevHub.DTOS.Auth;
 using DevHub.Options;
 using DevHub.Responses;
 using DevHub.Utilities;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
@@ -20,20 +21,46 @@ public class AuthService(IOptions<JwtOptions> option, IDataStore _dataStore,
 {
     private readonly JwtOptions _jwt = option.Value;
 
+
+    public async Task<SimpleResult<bool>> ChangePasswordAsync(HandleForgotPasswordRequest request)
+    {
+        var user = await _dataStore.Users.GetByCriteriaFirstAsync(u => u.IsActive && u.Email == request.Email);
+
+        if (user is null)
+        {
+            return SimpleResult<bool>.Failure(ResponseMessages.USER_NOT_FOUND);
+        }
+
+//        user.PasswordHashed = _passwordHasher.HashPassword(user, request.Password);
+
+        _dataStore.Users.UpdateItem(user);
+        
+        await _dataStore.CompleteAsync();
+
+        return SimpleResult<bool>.Success(true);
+    }
+
     public async Task<Result<LoginUserResponse>> AuthenticateUserAsync(LoginUserRequest request)
     {
-        //var password = _protectorPassword.Protect(request.Password);
 
         var user = await _dataStore.Users.GetByCriteriaFirstAsync(u => u.Email.Equals(request.Email));
 
-//        string pass = _protectorPassword.Unprotect(user.PasswordHashed);
+        if (user is null)
+        {
+            return Result<LoginUserResponse>.Failure("Invalid Credentials Provided!");
+        }
 
-        //if (user is null || !pass.Equals("dadas"))
-        //    return Result<LoginUserResponse>.Failure("Email or password is invalid!");
+        //PasswordVerificationResult passwordResult = _passwordHasher.VerifyHashedPassword(user, user.PasswordHashed, request.Password);
+
+        //if (passwordResult == PasswordVerificationResult.Failed)
+        //{
+        //    return Result<LoginUserResponse>.Failure("Invalid Credentials Provided!");
+        //}
 
         if (!user.IsActive)
+        {
             return Result<LoginUserResponse>.Failure("User can't sign in due to not actived.");
-
+        }
         var refreshToken = user.RefreshTokens?.SingleOrDefault(u => u.IsActive);
 
         if (refreshToken is null) 
@@ -41,14 +68,22 @@ public class AuthService(IOptions<JwtOptions> option, IDataStore _dataStore,
             refreshToken = new RefreshToken
             {
                 UserId = user.Id,
-                CreatedAt = DateTime.Now.ToLocalTime(),
-                ExpiredOn = DateTime.Now.ToLocalTime().AddMinutes(2),
+                CreatedAt = DateTime.UtcNow.ToLocalTime(),
+                ExpiredOn = DateTime.UtcNow.ToLocalTime().AddMinutes(2),
                 IsActive = true,
                 Token = GenerateRefreshToken()
             };
         }
+        
         await _dataStore.RefreshTokens.AddAsync(refreshToken);
 
+        //if (passwordResult == PasswordVerificationResult.SuccessRehashNeeded)
+        //{
+        //    user.PasswordHashed = _passwordHasher.HashPassword(user, request.Password);
+        //}
+        
+        _dataStore.Users.UpdateItem(user);
+        
         await _dataStore.CompleteAsync();
 
         var userlogin = new LoginUserResponse
@@ -65,10 +100,12 @@ public class AuthService(IOptions<JwtOptions> option, IDataStore _dataStore,
     {
         if (await _dataStore.Users.IsEmailExistAsync(request.Email!))
         {
-            return Result<AddUserResponse>.Failure("Email already exists!");
+            return Result<AddUserResponse>.Failure("Invalid Data!");
         }
 
         var user = await ConvertRequestToUserAsync(request);
+
+//        user.PasswordHashed = _passwordHasher.HashPassword(user, request.Password);
 
         await _dataStore.Users.AddAsync(user);
 
@@ -94,7 +131,7 @@ public class AuthService(IOptions<JwtOptions> option, IDataStore _dataStore,
         var userRefreshToken = new RefreshToken
         {
             CreatedAt = DateTime.UtcNow.ToLocalTime(),
-            ExpiredOn = DateTime.UtcNow.ToLocalTime().AddMinutes(200),// updatedBy appsettings.json
+            ExpiredOn = DateTime.UtcNow.ToLocalTime().AddMinutes(200),// should be updated by appsettings.json
             IsActive = true,
             Token = GenerateRefreshToken(),
             UserId = refreshTokenFromDb.UserId
@@ -206,7 +243,11 @@ public class AuthService(IOptions<JwtOptions> option, IDataStore _dataStore,
         var effectedRows = await _dataStore.CompleteAsync();
         return effectedRows > 0;
     }
+    public async Task UpdateLastSignIn(string userId)
+    {
+        int realUserId = _handler.GetRealUserId(userId);   
 
+    }
 
     private string GenerateRefreshToken()
     {
@@ -258,7 +299,6 @@ public class AuthService(IOptions<JwtOptions> option, IDataStore _dataStore,
             FirstName = request.FirstName!,
             LastName = request.LastName!,
             Email = request.Email!,
-            PasswordHashed = _handler.GetProtectedPassword(request.Password!),
             CreatedAt = DateTime.UtcNow,
             Bio = request.Bio!,
             IsActive = true,

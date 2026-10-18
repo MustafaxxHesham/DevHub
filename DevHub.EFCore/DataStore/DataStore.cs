@@ -17,6 +17,7 @@ public class DataStore : IDataStore
     public IMinimalPostsRepository MinimalPosts { get; private set; }
     public ICommentRepository Comments  { get; private set; }
     public ICoursesRepository Courses { get; private set; }
+    public IFeedbackRepository Feedbacks { get; private set; }
     public IBaseRepository<Tag, int> Tags { get; private set; }
     public IBaseRepository<ExternalLogin, int> ExternalLogins { get; private set; }
     public IBaseRepository<UserFollower, int> Followers { get; private set; }
@@ -28,7 +29,7 @@ public class DataStore : IDataStore
     public IBaseRepository<SubscriptionFeature, int> SubscriptionFeatures { get; private set; }
     public IBaseRepository<Transaction, int> Transactions { get; private set; }
     public IBaseRepository<Wallet, Guid> Wallets { get; private set; }
-    public IBaseRepository<CourseChapter, int> CourseChapters { get; private set; }
+    public ICourseChapterRepository CourseChapters { get; private set; }
     public IBaseRepository<CourseVideo, int> CourseVideos { get; private set; }
     public IBaseRepository<Reaction, int> Reactions { get; private set; }
     public IBaseRepository<RefreshToken, string> RefreshTokens { get; private set; }
@@ -36,6 +37,8 @@ public class DataStore : IDataStore
     public IBaseRepository<BookmarkedPost, int> BookmarkedPosts { get; private set; }
     public IBaseRepository<Notification, int> Notifications { get; private set; }
     public IBaseRepository<Category, int> Categories { get; private set; }
+    public IBaseRepository<UserCourse, int> UserCourses { get; private set; }
+    public IBaseRepository<WishList, int> WishLists { get; private set; }
 
     public DataStore(AppDbContext context)
     {
@@ -56,12 +59,15 @@ public class DataStore : IDataStore
         Reports = new BaseRepository<Report, int>(context);
         Followers = new BaseRepository<UserFollower, int>(context);
         Permissions = new BaseRepository<Permission, int>(context);
-        CourseChapters = new BaseRepository<CourseChapter, int>(context);
+        CourseChapters = new CourseChapterRepository(context);
         CourseVideos = new BaseRepository<CourseVideo, int>(context);
         SubscriptionPlans = new BaseRepository<SubscriptionPlan, int>(context);
         SubscriptionFeatures = new BaseRepository<SubscriptionFeature, int>(context);
         UserSubscriptions = new BaseRepository<UserSubscription, int>(context);
         Transactions = new BaseRepository<Transaction, int>(context);
+        UserCourses = new BaseRepository<UserCourse, int>(context);
+        WishLists = new BaseRepository<WishList, int>(context);
+        Feedbacks = new FeedbackRepository(context);
         Wallets = new BaseRepository<Wallet, Guid>(context);
     }
 

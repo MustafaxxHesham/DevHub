@@ -11,6 +11,8 @@ public class AppDbContext : DbContext
     public DbSet<UserSubscription> UserSubscriptions { get; set; }
     public DbSet<Category> Categories { set; get; }
     public DbSet<User> Users { set; get; }
+    public DbSet<UserCourseTrack> UserCourseTracks { set; get; }
+    public DbSet<UserCourse> UserCourses { set; get; }
     public DbSet<Role> Roles { set; get; }
     public DbSet<Course> Courses { set; get; }
     public DbSet<ExternalLogin> ExternalLogins { set; get; }
@@ -24,6 +26,7 @@ public class AppDbContext : DbContext
     public DbSet<Tag> Tags { set; get; }
     public DbSet<Reaction> Reactions { set; get; }
     public DbSet<Wallet> Wallets { set; get; }
+    public DbSet<WishList> WishLists { set; get; }
     public DbSet<Transaction> Transactions { set; get; }
     public DbSet<MinimalPost> MinimalPosts { set; get; }
     protected override void OnModelCreating(ModelBuilder modelBuilder)

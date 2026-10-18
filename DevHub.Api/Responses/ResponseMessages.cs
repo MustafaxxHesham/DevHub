@@ -14,4 +14,6 @@ public static class ResponseMessages
     public static readonly string TAG_NOT_FOUND = "Tag Not Found!";
     public static readonly string DATA_SENT_MANIPULATED = "Data sent is incorrect";
     public static readonly string ACTION_ALREADY_DONE = "Action Already Done!"; 
+
+    public static string EntityNotFound(string entityName) => $"{entityName} Not Found!";
 }

@@ -9,12 +9,13 @@ public record class EditPostRequest
     public string? Slug { get; set; }
     public string? Content { get; set; }
     public string? Summary { get; set; }
-    public string? CategoryName { get; set; }
+    public string? CategoryId { get; set; }
     public string AuthorId { get; set; }
     [FileExtensions(Extensions = "jpg,png,jpeg")]
     public IFormFile? MainImage { get; set; }
     public ICollection<Tag> Tags { get; set; }
     public List<string> ImagesKey { get; set; }
     [FileExtensions(Extensions = "jpg,png,jpeg")]
-    public ICollection<IFormFile> PostImages { get; set; }
+    public List<IFormFile> PostImages { get; set; }
+    public List<string> RemovedImagesUrls { set; get; }
 }

@@ -7,37 +7,40 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using DevHub.Domain.Models;
 using DevHub.Responses;
-using DevHub.DTOS.Commons;
 using DevHub.Utilities;
 
 
 namespace DevHub.Services.AdminService;
 
-public class AdminService(IDataStore _dataStore, IDataProtectionProvider _dataProtectionProvider) : IAdminService
+public class AdminService(IDataStore _dataStore, ProtectionHandler _protectionHandler) : IAdminService
 {
-    private readonly IDataProtector _dataProtector = _dataProtectionProvider.CreateProtector("userId");
-    
     public async Task<SimpleResult<bool>> ActivateAccountAsync(string userId)
     {
-        var realUserId = int.Parse(_dataProtector.Unprotect(userId));
+        var realUserId = _protectionHandler.GetRealUserId(userId);
+
         var user = await _dataStore.Users.GetByIdAsync(realUserId);
 
         if (user is null)
+        {
             return SimpleResult<bool>.Failure(AuthResultMessages.USER_NOT_FOUND);
+        }
 
         user.IsActive = true;
 
         _dataStore.Users.UpdateItem(user);
-        
+
         if (await _dataStore.CompleteAsync() > 0)
+        {
             return SimpleResult<bool>.Success(true);
+        }
 
         return SimpleResult<bool>.Failure("Error Happenend Must Call The Engineer Now!");
     }
 
     public async Task<SimpleResult<bool>> DeactivateAccountAsync(string userId)
     {
-        var realUserId = handleUserId(userId);
+        var realUserId = _protectionHandler.GetRealUserId(userId);
+
         var user = await _dataStore.Users.GetByIdAsync(realUserId);
 
         if (user is null)
@@ -55,7 +58,7 @@ public class AdminService(IDataStore _dataStore, IDataProtectionProvider _dataPr
 
     public async Task<SimpleResult<bool>> DeleteAccountAsync(string userId)
     {
-        var realUserId = handleUserId(userId);
+        var realUserId = _protectionHandler.GetRealUserId(userId);
         var user = await _dataStore.Users.GetByIdAsync(realUserId);
 
         if (user is null)
@@ -104,7 +107,7 @@ public class AdminService(IDataStore _dataStore, IDataProtectionProvider _dataPr
 
     public async Task<Result<List<Permission>>> GetUserPermissionsList(string userId)
     {
-        var realUserId = handleUserId(userId);
+        var realUserId = _protectionHandler.GetRealUserId(userId);
 
         var user = await _dataStore.Users.GetByCriteriaFirstAsync(x => x.Id == realUserId, ["Permissions"]);
         
@@ -116,7 +119,7 @@ public class AdminService(IDataStore _dataStore, IDataProtectionProvider _dataPr
 
     public async Task<SimpleResult<bool>> UpdateUserPermissionsAsync(string userId, List<int> permissionsIds)
     {
-        var realUserId = handleUserId(userId);
+        var realUserId = _protectionHandler.GetRealUserId(userId);
 
         if (realUserId == -1) { 
             return SimpleResult<bool>.Failure(ResponseMessages.DATA_SENT_MANIPULATED);
@@ -142,12 +145,6 @@ public class AdminService(IDataStore _dataStore, IDataProtectionProvider _dataPr
         await _dataStore.CompleteAsync();
 
         return SimpleResult<bool>.Success(true);
-    }
-
-
-    private int handleUserId(string userId)
-    {
-        return int.Parse(_dataProtector.Unprotect(userId));
     }
 
     public async Task<IEnumerable<Permission>> GetPermissionsAsync()

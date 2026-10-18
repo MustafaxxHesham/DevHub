@@ -1,14 +1,13 @@
 ﻿using DevHub.Domain.DataStoreContract;
 using DevHub.Domain.Enums;
+using DevHub.Utilities;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.DataProtection;
-using System.Security.Claims;
 
 namespace DevHub.AuthorizationRequirements.AddPostPolicy;
-public class AddPostHandler(IDataStore _dataStore, IDataProtectionProvider provider) : 
-    AuthorizationHandler<AddPostRequirement>, IAuthorizationHandler
+public class AddPostHandler(IDataStore _dataStore,
+                            ProtectionHandler _protectionHandler) : 
+                            AuthorizationHandler<AddPostRequirement>, IAuthorizationHandler
 {
-    private readonly IDataProtector _protector = provider.CreateProtector("UserId");
     protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context, AddPostRequirement requirement)
     {
         if (context.User is null)
@@ -23,16 +22,9 @@ public class AddPostHandler(IDataStore _dataStore, IDataProtectionProvider provi
             context?.Fail();
         }
 
-        var userIdClaim = context?.User?.FindFirst(ClaimTypes.NameIdentifier);
+        int userId = Common.RetrieveUserId(context.User, _protectionHandler);
 
-        if (userIdClaim == null && string.IsNullOrEmpty(userIdClaim?.Value))
-        {
-            context?.Fail();
-        }
-
-        var userIdAsString = _protector.Unprotect(userIdClaim?.Value);
-
-        if(int.TryParse(userIdAsString, out int userId))
+        if (userId > 0)
         {
             // if user is connected and deletes the account in same time...
             if (!await _dataStore.Users.IsExistAsync(userId))

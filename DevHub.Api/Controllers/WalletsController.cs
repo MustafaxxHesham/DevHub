@@ -17,20 +17,6 @@ public class WalletsController
     [HttpPost("/pay")]
     public async Task PayFor(PayForCourseRequest request)
     {
-        SemaphoreSlim semaphoreSlim = new SemaphoreSlim(10);
-
-        await semaphoreSlim.WaitAsync();
-
-        try
-        {
-//            _context.beginTransaction()
-        } catch (Exception ex)
-        {
-
-        }
-
         throw new NotImplementedException();
     }
-
-
 }

@@ -1,2 +1,2 @@
 ﻿namespace DevHub.DTOS.Commons;
-public record class PagedRequest(int PageSize, int PageNumber);
+public record class PagedRequest(int PageSize, int PageNumber, int? LastId);

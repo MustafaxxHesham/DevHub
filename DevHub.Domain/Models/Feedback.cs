@@ -8,4 +8,5 @@ public class Feedback
     public User User { get; set; }
     public int CourseId { get; set; }
     public Course Course { get; set; }
+    public DateTime CreatedAt { get; set; }
 }
