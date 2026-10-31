@@ -121,20 +121,14 @@ public class ReportsController(IReportService _reportService) : ControllerBase
     }
 
     [HttpGet("weekly/{week-number}")]
-    public async Task<ActionResult> GetReportsWeekly([FromRoute(Name = "week-number")] int weekNum)
+    public async Task<ActionResult> GetReportsWeekly(KeyPagedRequest<int> request)
     {
-        if (weekNum >= 0)
+        if (request.Key <= 0)
         {
             return BadRequest("Week number must be greater than or equal 0.");
         }
 
-        int pageSize = int.Parse(HttpContext.Request.Headers["X-PageSize"]!);
-
-        int pageNumber = int.Parse(HttpContext.Request.Headers["X-PageNumber"]!);
-
-        var keyPagedRequest = KeyPagedRequest<int>.PagedRequestCreate(weekNum, pageSize, pageNumber);
-
-        var result = await _reportService.GetWeeklyReportsAsync(keyPagedRequest);
+        var result = await _reportService.GetWeeklyReportsAsync(request);
 
         if (!result.IsSuccess)
         {
@@ -155,6 +149,7 @@ public class ReportsController(IReportService _reportService) : ControllerBase
 
         if (!result.IsSuccess)
         {
+            // To Be Reviewed!
             if (result.Error.Equals(DbErrors.NotFoundError.ToString()))
             {
                 return Ok(result.Value);
