@@ -15,8 +15,7 @@ public class User : ISoftDeletable
     public bool IsEmailVerified { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime LastSignIn { get; set; }
-    public Guid? Wallet { get; set; }
-    public Wallet? WalletId { get; set; }
+    public Wallet? Wallet { get; set; }
     public int RoleId { get; set; }
     public Role Role{ get; set; }
     public ICollection<RefreshToken>? RefreshTokens { set; get; }

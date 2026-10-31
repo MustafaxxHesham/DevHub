@@ -11,6 +11,27 @@ namespace DevHub.EFCore.Repository;
 
 public class FeedbackRepository(AppDbContext _context) : BaseRepository<Feedback, int>(_context), IFeedbackRepository
 {
+    public Task<Feedback> GetFeedbackById(int feedbackId)
+    {
+        var query = _context.Feedbacks.AsQueryable();
+        
+        query = query.Select(f => new Feedback
+        {
+            Content = f.Content,
+            CreatedAt = f.CreatedAt,
+            Id = f.Id,
+            Rate = f.Rate,
+            User = new User
+            {
+                FirstName = f.User.FirstName,
+                LastName = f.User.LastName,
+                ProfileImageUrl = f.User.ProfileImageUrl,
+            }
+        });
+
+        return query.FirstOrDefaultAsync();
+    }
+
     public async Task<IPagedList<Feedback>> GetPagedFeedbacksAsync(int pageSize, 
         int pageNumber, 
         int courseId,

@@ -160,7 +160,7 @@ public class CoursesService(IDataStore _dataStore, ProtectionHandler _protection
             request.PageNumber,
             w => w.UserId == realUserId,
             w => w.UserId,
-            ["Course"]);
+            [nameof(Course)]);
 
         var courses = pagedResult.ValueList.Select(w => w.Course);
 

@@ -12,7 +12,7 @@ namespace DevHub.Services.PostsService;
 public class PostService(IDataStore _dataStore, IWebHostEnvironment _env, 
                          ProtectionHandler _protectionHandler,
                          RecommendationService.RecommendationService _recommendationService,
-                         IDataProtectionProvider provider, ILogger<PostService> _logger) : IPostService
+                         ILogger<PostService> _logger) : IPostService
 {
 
     public async Task<Result<PostDetailsResponse>> GetPostInDetailAsync(string id)

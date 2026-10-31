@@ -8,7 +8,6 @@ public class UserCourseConfigurations : IEntityTypeConfiguration<UserCourse>
 {
     public void Configure(EntityTypeBuilder<UserCourse> builder)
     {
-
         builder.HasOne(uc => uc.Course)
             .WithMany(uc => uc.UsersEnrolled)
             .HasForeignKey(uc => uc.CourseId);
@@ -16,5 +15,7 @@ public class UserCourseConfigurations : IEntityTypeConfiguration<UserCourse>
         builder.HasOne(uc => uc.User)
             .WithMany(uc => uc.EnrolledCourses)
             .HasForeignKey(uc => uc.UserId);
+
+//        builder.HasKey(x => new { x.CourseId, x.UserId });
     }
 }

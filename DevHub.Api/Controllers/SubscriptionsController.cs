@@ -11,10 +11,7 @@ public class SubscriptionsController(ISubscriptionService _subscriptionService) 
     {
         throw new NotImplementedException();
     }
-    public record class UserSubscribeRequest(
-        string UserId,
-        string PlanId
-    );
+    public record class UserSubscribeRequest(string UserId, string PlanId);
 
     [HttpPost]
     public async Task<ActionResult> Subscribe(UserSubscribeRequest request)

@@ -5,9 +5,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using System.Security.Claims;
 namespace DevHub.AuthorizationRequirements.CommentPolicy;
-public class CommentPolicyHandler(IDataStore _dataStore, IDataProtectionProvider provider) : AuthorizationHandler<CommentPolicyRequirement>
+public class CommentPolicyHandler(IDataStore _dataStore, ProtectionHandler _protectionHandler) : AuthorizationHandler<CommentPolicyRequirement>
 {
-    private readonly IDataProtector _protector = provider.CreateProtector(ProtectionPurposes.USER_ID_PURPOSE);
     protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context, CommentPolicyRequirement requirement)
     {
         var userEmailClaim = context.User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Email);
@@ -26,7 +25,7 @@ public class CommentPolicyHandler(IDataStore _dataStore, IDataProtectionProvider
             return;
         }
 
-        var realUserId = int.Parse(_protector.Unprotect(userIdClaims.Value));
+        var realUserId = _protectionHandler.GetRealUserId(userIdClaims.Value);
 
         var permissions = await _dataStore.Users.GetUserPermissionsAsync(realUserId);
 

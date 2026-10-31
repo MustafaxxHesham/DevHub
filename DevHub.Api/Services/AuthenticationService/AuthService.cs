@@ -20,18 +20,19 @@ public class AuthService(IOptions<JwtOptions> option, IDataStore _dataStore,
                          IWebHostEnvironment _env) : IAuthService
 {
     private readonly JwtOptions _jwt = option.Value;
-
+    private readonly PasswordHasher<object> _passwordHasher = new();
 
     public async Task<SimpleResult<bool>> ChangePasswordAsync(HandleForgotPasswordRequest request)
     {
-        var user = await _dataStore.Users.GetByCriteriaFirstAsync(u => u.IsActive && u.Email == request.Email);
+        var user = await _dataStore.Users.GetByCriteriaFirstAsync(u => u.IsActive
+        && u.Email.Equals(request.Email, StringComparison.OrdinalIgnoreCase));
 
         if (user is null)
         {
             return SimpleResult<bool>.Failure(ResponseMessages.USER_NOT_FOUND);
         }
 
-//        user.PasswordHashed = _passwordHasher.HashPassword(user, request.Password);
+        //user.PasswordHashed = _passwordHasher.HashPassword(user, request.Password);
 
         _dataStore.Users.UpdateItem(user);
         
@@ -50,17 +51,18 @@ public class AuthService(IOptions<JwtOptions> option, IDataStore _dataStore,
             return Result<LoginUserResponse>.Failure("Invalid Credentials Provided!");
         }
 
-        //PasswordVerificationResult passwordResult = _passwordHasher.VerifyHashedPassword(user, user.PasswordHashed, request.Password);
+        PasswordVerificationResult passwordResult = _passwordHasher.VerifyHashedPassword(user, user.PasswordHashed, request.Password);
 
-        //if (passwordResult == PasswordVerificationResult.Failed)
-        //{
-        //    return Result<LoginUserResponse>.Failure("Invalid Credentials Provided!");
-        //}
+        if (passwordResult == PasswordVerificationResult.Failed)
+        {
+            return Result<LoginUserResponse>.Failure("Invalid Credentials Provided!");
+        }
 
         if (!user.IsActive)
         {
             return Result<LoginUserResponse>.Failure("User can't sign in due to not actived.");
         }
+
         var refreshToken = user.RefreshTokens?.SingleOrDefault(u => u.IsActive);
 
         if (refreshToken is null) 
@@ -77,11 +79,12 @@ public class AuthService(IOptions<JwtOptions> option, IDataStore _dataStore,
         
         await _dataStore.RefreshTokens.AddAsync(refreshToken);
 
-        //if (passwordResult == PasswordVerificationResult.SuccessRehashNeeded)
-        //{
-        //    user.PasswordHashed = _passwordHasher.HashPassword(user, request.Password);
-        //}
-        
+        if (passwordResult == PasswordVerificationResult.SuccessRehashNeeded)
+        {
+            user.PasswordHashed = _passwordHasher.HashPassword(user, request.Password);
+        }
+        user.LastSignIn = DateTime.UtcNow;
+
         _dataStore.Users.UpdateItem(user);
         
         await _dataStore.CompleteAsync();
@@ -305,6 +308,24 @@ public class AuthService(IOptions<JwtOptions> option, IDataStore _dataStore,
             IsEmailVerified = false,
             ProfileImageUrl = await UploadImageFileToServerAsync(request.ProfileImage!),
             RoleId = (await _dataStore.Roles.GetByCriteriaFirstAsync(r => r.RoleName.Equals(Roles.Reader.ToString()))).Id
+        };
+    }
+
+    private string HashPassword(string password)
+    {
+        return _passwordHasher.HashPassword(null!, password);
+    }
+
+    private bool VerifyPassword(string providedPassword, string hashedPassword)
+    {
+        var verificationResult = _passwordHasher.VerifyHashedPassword(null!, hashedPassword, providedPassword);
+
+        return verificationResult switch
+        {
+            PasswordVerificationResult.Success => true,
+            PasswordVerificationResult.SuccessRehashNeeded => true, // Valid password, but algorithm settings were upgraded
+            PasswordVerificationResult.Failed => false,
+            _ => false
         };
     }
 }

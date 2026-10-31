@@ -1,5 +1,5 @@
 ﻿namespace DevHub.Utilities;
-public interface INotificationComment
+public interface INotificationActions
 {
     Task NotifyAuthorByComment(object request);
     Task NotifyClientByReportResponse();

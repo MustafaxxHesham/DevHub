@@ -11,5 +11,6 @@ public interface IFeedbackRepository : IBaseRepository<Feedback, int>
         Sorting sorting = Sorting.Ascending);
     Task<IPagedList<Feedback>> GetPagedFeedbacksByRateAsync(int rate, int pageSize, int pageNumber, int courseId, int? lastId,
         Sorting sorting = Sorting.Ascending);
+    Task<Feedback> GetFeedbackById(int feedbackId);
     Task<Dictionary<string, int>> GetRateCountedAsync(int courseId);
 }

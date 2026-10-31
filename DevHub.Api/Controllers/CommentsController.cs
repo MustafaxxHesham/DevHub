@@ -1,9 +1,9 @@
 ﻿using DevHub.AuthorizationPolicies;
-using DevHub.Domain.DataStoreContract;
 using DevHub.Domain.Models;
 using DevHub.DTOS.Comments;
 using DevHub.Responses;
 using DevHub.Services.CommentService;
+using DevHub.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -11,29 +11,27 @@ namespace DevHub.Controllers;
 
 [ApiController]
 [Route("api/v1/posts/{postId}/comments")]
-public class CommentsController(IDataStore _dataStore,
-    ICommentService _commentService,
-    ILogger<CommentsController> _logger) : ControllerBase
+public class CommentsController(ICommentService _commentService, ILogger<CommentsController> _logger) : ControllerBase
 {
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<Comment>>> GetAllMainComments([FromRoute]int postId)
+    public async Task<ActionResult<IEnumerable<Comment>>> GetAllMainComments(KeyPagedRequest<string> request)
     {
-        var result = await _dataStore.Comments.GetByCriteriaAsync(p => p.PostId == postId, x => x.Id);
-        
-        if (result.ValueList.Any())
-            return Ok(result);
+        var result = await _commentService.GetTopCommentsAsync(request);
 
-        return BadRequest();
+        if (!result.Value.Any())
+            return BadRequest();
+
+        return Ok(result);
     }
 
     [HttpGet("{commentId}/replies")]
     public async Task<ActionResult<IEnumerable<Comment>>> GetAllRepliesToComment([FromQuery]CommentRepliesRequest request)
     {
 
-        var result = await _dataStore.Comments
-            .GetByCriteriaAsync(p => p.PostId == request.PostId && p.ParentCommentId == request.CommentId, x => x.Id);
+        //var result = await _dataStore.Comments
+        //    .GetByCriteriaAsync(p => p.PostId == request.PostId && p.ParentCommentId == request.CommentId, x => x.Id);
 
-        return Ok(result);
+        return Ok(/*result*/);
     }
 
     [HttpPost]

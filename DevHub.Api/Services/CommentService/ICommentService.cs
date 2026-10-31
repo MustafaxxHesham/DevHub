@@ -6,7 +6,7 @@ namespace DevHub.Services.CommentService;
 public interface ICommentService
 {
     Task<SimpleResult<int>> GetCommentsCount(string postId);
-    Task<Result<IEnumerable<GetCommentResponse>>> GetTopCommentsAsync(KeyPagedRequest<int> request);
+    Task<Result<IEnumerable<GetCommentResponse>>> GetTopCommentsAsync(KeyPagedRequest<string> request);
     Task<Result<Comment>> AddReplyToCommentAsync(SubmitCommentRequest request);
     Task<Result<Comment>> AddCommentAsync(SubmitCommentRequest request);
     Task<SimpleResult<bool>> DeleteCommentAsync(int commentId);

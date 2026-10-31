@@ -9,7 +9,7 @@ namespace DevHub.ActionFilters;
 
 public class IdempotencyAttribute : ActionFilterAttribute, IAsyncActionFilter
 {
-    public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
+    public override async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
     {
         var _cache = context.HttpContext.RequestServices.GetRequiredService<IDistributedCache>();
 

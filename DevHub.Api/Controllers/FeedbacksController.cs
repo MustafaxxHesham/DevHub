@@ -13,9 +13,16 @@ namespace DevHub.Controllers;
 public class FeedbacksController(IFeedbacksService _feedbacksService) : ControllerBase
 {
     [HttpGet("{feedbackId}")]
-    public ActionResult Get(string feedbackId)
+    public async Task<ActionResult> Get(string feedbackId)
     {
-        throw new NotImplementedException();
+        var feedbackResult = await _feedbacksService.GetFeedbackByIdAsync(feedbackId);
+
+        if (!feedbackResult.IsSuccess)
+        {
+            return NotFound(feedbackResult.Error);
+        }
+
+        return Ok(feedbackResult.Value);
     }
 
     [HttpPatch("{feedbackId}")]
@@ -36,11 +43,6 @@ public class FeedbacksController(IFeedbacksService _feedbacksService) : Controll
     [Authorize]
     public async Task<ActionResult> Delete(string feedbackId)
     {
-        if (string.IsNullOrEmpty(feedbackId.Trim()))
-        {
-            return BadRequest();
-        }
-
         var result = await _feedbacksService.RemoveFeedback(feedbackId);
 
         if (!result.IsSuccess)
@@ -64,7 +66,9 @@ public class FeedbacksController(IFeedbacksService _feedbacksService) : Controll
         if (!result.IsSuccess)
         {
             if (result.Error.Contains("not found", StringComparison.OrdinalIgnoreCase))
+            {
                 return NotFound(result.Error);
+            }
             return BadRequest(result.Error);
         }
 

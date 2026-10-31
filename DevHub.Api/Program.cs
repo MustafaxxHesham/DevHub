@@ -1,7 +1,9 @@
+using DevHub.AuthorizationPolicies;
 using DevHub.EFCore;
 using DevHub.Middlewares;
 using DevHub.Services;
 using DevHub.Utilities;
+using FluentValidation;
 using Hangfire;
 using Hangfire.SqlServer;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -18,7 +20,7 @@ var builder = WebApplication.CreateBuilder(args);
 //.ConfigureApiBehaviorOptions(ConfigApiBehavior);
 builder.Services.AddControllers();
 
-builder.Services.AddCors(setup => setup.AddPolicy("MyOwnPolicy", policyConfig => policyConfig.AddClientSidePolicy()));
+builder.Services.AddCors(setup => setup.AddPolicy(AuthPolicies.CORSPolicy, policyConfig => policyConfig.AddClientSidePolicy()));
 
 builder.Services.AddEntityFrameworkCoreConfigurations(builder.Configuration.GetConnectionString("DefaultConnStr")!);
 
@@ -45,6 +47,8 @@ builder.Services.AddSignalR();
 builder.Services.AddHangfireServer();
 
 builder.Services.AddEndpointsApiExplorer();
+
+builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 
 builder.Services.AddSwaggerGen();
 
@@ -76,12 +80,16 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI(c =>
     {
-        c.HeadContent = @"
-        <script>
-            window.addEventListener('DOMContentLoaded', () => {
-                const checkUi = setInterval(() => {
-                    if (window.ui) {
-                        clearInterval(checkUi);
+        c.HeadContent = @"<script>
+        window.addEventListener('DOMContentLoaded', () => {
+            const checkSpec = setInterval(() => {
+                if (window.ui && window.ui.specSelectors && window.ui.specSelectors.specJson) {
+                    const spec = window.ui.specSelectors.specJson();
+                    const paths = spec.get ? spec.get('paths') : spec?.paths;
+
+                    // Ensure the spec paths have actually finished downloading/parsing
+                    if (paths && (paths.size > 0 || Object.keys(paths).length > 0)) {
+                        clearInterval(checkSpec);
 
                         // 1. Sort API methods by custom verb order
                         window.ui.getConfigs().operationsSorter = (a, b) => {
@@ -89,19 +97,39 @@ if (app.Environment.IsDevelopment())
                             return (order[a.get('method')] || 99) - (order[b.get('method')] || 99);
                         };
 
-                        // 2. Calculate and render total API count
-                        const infoSection = document.querySelector('.swagger-ui .info');
-                        if (infoSection) {
-                            const totalOperations = document.querySelectorAll('.opblock').length;
-                            const countBadge = document.createElement('div');
-                            countBadge.style.cssText = 'margin-top: 10px; font-weight: bold; font-size: 16px; color: #4990e2;';
-                            countBadge.innerHTML = `Total Endpoints: <span>${totalOperations}</span>`;
-                            infoSection.appendChild(countBadge);
+                        // 2. Calculate total endpoints directly from the spec data
+                        let totalOperations = 0;
+                        const pathsObj = paths.toJS ? paths.toJS() : paths;
+                        const httpMethods = ['get', 'post', 'put', 'patch', 'delete', 'options', 'head', 'trace'];
+
+                        for (const path in pathsObj) {
+                            const methods = pathsObj[path];
+                            if (methods) {
+                                for (const method in methods) {
+                                    if (httpMethods.includes(method.toLowerCase())) {
+                                        totalOperations++;
+                                    }
+                                }
+                            }
                         }
+
+                        // 3. Render total API count badge once the info section appears
+                        const checkInfo = setInterval(() => {
+                            const infoSection = document.querySelector('.swagger-ui .info');
+                            if (infoSection && !document.getElementById('total-endpoints-badge')) {
+                                clearInterval(checkInfo);
+                                const countBadge = document.createElement('div');
+                                countBadge.id = 'total-endpoints-badge';
+                                countBadge.style.cssText = 'margin-top: 10px; font-weight: bold; font-size: 16px; color: #4990e2;';
+                                countBadge.innerHTML = `Total Endpoints: <span>${totalOperations}</span>`;
+                                infoSection.appendChild(countBadge);
+                            }
+                        }, 100);
                     }
-                }, 100);
-            });
-        </script>";
+                }
+            }, 100);
+        });
+    </script>";
     });
 }
 
@@ -109,7 +137,7 @@ app.UseHttpsRedirection();
 
 app.UseStaticFiles();
 
-app.UseCors("MyOwnPolicy");
+app.UseCors(AuthPolicies.CORSPolicy);
 
 app.UseAuthentication();
 

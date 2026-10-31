@@ -8,7 +8,8 @@ namespace DevHub.Utilities;
 public class KeyPagedRequest<T>(T Key,
     int PageSize, 
     int PageNumber,
-    int? lastId, Sorting? sortingDirection = Sorting.Ascending)
+    int? lastId,
+    Sorting? sortingDirection = Sorting.Ascending)
 {
     public T Key { get; set; } = Key;
     public int PageSize { get; set; } = PageSize;

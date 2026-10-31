@@ -147,6 +147,28 @@ public class FeedbacksService(ProtectionHandler _protectionHandler, IDataStore _
         return Result<PagedResponse<FeedbackResponse>>.Success(pagedResult);
     }
 
+    public async Task<Result<FeedbackResponse>> GetFeedbackByIdAsync(string feedbackId)
+    {
+        var realFeedbackId = _protectionHandler.GetRealFeedbackId(feedbackId);
+
+        if (realFeedbackId == -1)
+        {
+            return Result<FeedbackResponse>.Failure(ResponseMessages.EntityNotFound(nameof(Feedback)));
+        }
+
+        var feedback = await _dataStore.Feedbacks.GetFeedbackById(realFeedbackId);
+
+        if (feedback is null)
+        {
+            return Result<FeedbackResponse>.Failure(ResponseMessages.EntityNotFound(nameof(Feedback)));
+        }
+
+        var feedbackResponse = GenerateFeedbackResponse(feedback);
+
+        return Result<FeedbackResponse>.Success(feedbackResponse);
+
+    }
+
     public async Task<SimpleResult<bool>> RemoveFeedback(string feedbackId)
     {
         var realFeedbackId = _protectionHandler.GetRealFeedbackId(feedbackId.Trim());
@@ -172,14 +194,20 @@ public class FeedbacksService(ProtectionHandler _protectionHandler, IDataStore _
 
     private List<FeedbackResponse> MapFeedbacksToResponses(IEnumerable<Feedback> feedbacks)
     {
-       return feedbacks.Select(f => new FeedbackResponse(
-            FeedbackId:_protectionHandler.GetProtectedFeedbackId(f.Id),
-            UserId:_protectionHandler.GetProtectedUserId(f.UserId),
-            ReviewerFullName: f.User.FirstName + " " + f.User.LastName,
-            ReviewerImageProfile: f.User.ProfileImageUrl,
-            Rate:f.Rate,
-            Content:f.Content,
-            CreatedAt:f.CreatedAt
-       )).ToList();
+       return feedbacks.Select(GenerateFeedbackResponse)
+                       .ToList();
+    }
+
+    private FeedbackResponse GenerateFeedbackResponse(Feedback feedback)
+    {
+        return new FeedbackResponse(
+            FeedbackId: _protectionHandler.GetProtectedFeedbackId(feedback.Id),
+            UserId: _protectionHandler.GetProtectedUserId(feedback.UserId),
+            ReviewerFullName: feedback.User.FirstName + " " + feedback.User.LastName,
+            ReviewerImageProfile: feedback.User.ProfileImageUrl,
+            Rate: feedback.Rate,
+            Content: feedback.Content,
+            CreatedAt: feedback.CreatedAt
+       );
     }
 }

@@ -9,11 +9,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace DevHub.Services.CommentService;
 
-public class CommentService(IDataStore _dataStore,
-                            ProtectionHandler _protectionHandler,
+public class CommentService(IDataStore _dataStore, ProtectionHandler _protectionHandler,
                             ILogger<CommentService> _logger) : ICommentService
 {
-
     public async Task<Result<Comment>> AddCommentAsync(SubmitCommentRequest request)
     {
         int realPostId = _protectionHandler.GetRealPostId(request.PostId);
@@ -137,10 +135,18 @@ public class CommentService(IDataStore _dataStore,
         
         return SimpleResult<int>.Success(count);
     }
-    public async Task<Result<IEnumerable<GetCommentResponse>>> GetTopCommentsAsync(KeyPagedRequest<int> request)
+    public async Task<Result<IEnumerable<GetCommentResponse>>> GetTopCommentsAsync(KeyPagedRequest<string> request)
     {
+
+        var realPostId = _protectionHandler.GetRealPostId(request.Key);
+
+        if (realPostId == -1)
+        {
+            return Result<IEnumerable<GetCommentResponse>>.Failure(ResponseMessages.POST_NOT_FOUND);
+        }
+
         //To be Revisioned!!!
-        var comments = await  _dataStore.Comments.GetTopCommentsAsync(request.Key, request.PageSize, 0)
+        var comments = await  _dataStore.Comments.GetTopCommentsAsync(realPostId, request.PageSize, 0)
             .GroupBy(c => c.ParentCommentId, (k, v) => new
             {
                 Key = k.GetValueOrDefault(0),

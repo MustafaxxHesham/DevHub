@@ -15,21 +15,15 @@ namespace DevHub.Controllers;
 //[Authorize]
 public class ReportsController(IReportService _reportService) : ControllerBase
 {
-    [HttpGet("users/{userId}")]
+    [HttpGet("users/{userId}")] 
     [PaginationValidator]
-    public async Task<ActionResult<PagedResponse<ReportResponse>>> GetReportsByUser(string userId)
+    public async Task<ActionResult<PagedResponse<ReportResponse>>> GetReportsByUser(KeyPagedRequest<string> request)
     {
-        if (string.IsNullOrEmpty(userId) || userId.Equals("0"))
+        if (string.IsNullOrEmpty(request.Key) || request.Key.Equals("0"))
         {
             return BadRequest();
         }
-        int pageSize = int.Parse(HttpContext.Request.Headers["X-PageSize"]!);
-
-        int pageNumber = int.Parse(HttpContext.Request.Headers["X-PageNumber"]!);
-
-        var pagedRequestResult = KeyPagedRequest<string>.PagedRequestCreate(userId, pageSize, pageNumber);
-
-        var result = await _reportService.GetReportsByUserAsync(pagedRequestResult);
+        var result = await _reportService.GetReportsByUserAsync(request);
 
         if (!result.IsSuccess)
         {

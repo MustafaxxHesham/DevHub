@@ -1,13 +1,13 @@
 ﻿using DevHub.ActionFilters;
 using DevHub.AuthorizationPolicies;
 using DevHub.DTOS.Courses;
-using DevHub.DTOS.CourseVideos;
-using DevHub.Responses;
 using DevHub.Services.CoursesService;
 using DevHub.Utilities;
+using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Distributed;
+using System.ComponentModel.DataAnnotations;
 
 namespace DevHub.Controllers;
 
@@ -36,19 +36,25 @@ public class CoursesController(ICoursesService _coursesService) : ControllerBase
     [HttpPost]
     [Idempotency]
     [Authorize(Policy = AuthPolicies.AddCoursePolicy)]
-    public async Task<ActionResult> Post(CreateCourseRequest request)
+    public async Task<ActionResult> Post(CreateCourseRequest request, [FromServices]IValidator<CreateCourseRequest> validator)
     {
-        var webRootPath = HttpContext.RequestServices.GetRequiredService<IWebHostEnvironment>()
-                                     .WebRootPath;
+        var validationResult = await validator.ValidateAsync(request);
+
+        if (!validationResult.IsValid)
+        {
+            return BadRequest(validationResult.ToDictionary());
+        }
+
+        var webRootPath = HttpContext.RequestServices.GetRequiredService<IWebHostEnvironment>().WebRootPath;
 
         var result = await _coursesService.CreateCourseAsync(request, webRootPath);
 
         if (!result.IsSuccess)
         {
-
+            BadRequest();
         }
 
-        return CreatedAtAction(nameof(Get), new { result.Value });
+        return CreatedAtAction(nameof(Get), new { result.Value.CourseId }, result.Value);
     }
 
     [HttpDelete("{courseId}")]
@@ -92,12 +98,11 @@ public class CoursesController(ICoursesService _coursesService) : ControllerBase
         throw new NotImplementedException();
     }
 
-
     [HttpPost("enroll-course")]
     [Idempotency]
     public async Task<ActionResult> EnrollCourse(EnrollCourseRequest request, CancellationToken cancellationToken)
     {
-        var idempotencyKey = HttpContext.Request.Headers["X-Idempotency-Key"];
+        var idempotencyKey = HttpContext.Request.Headers["X-Idempotency-Key"]!;
 
         var result = await _coursesService.EnrollCourseAsync(request);
 
@@ -107,31 +112,21 @@ public class CoursesController(ICoursesService _coursesService) : ControllerBase
             {
                 return NotFound(result.Error);
             }
-            if (result.Error.Equals(ResponseMessages.ACTION_ALREADY_DONE))
-            {
-                return Conflict();
-            }
+
+            return Conflict();
         }
 
-        var _cacheService = HttpContext.RequestServices.GetRequiredService<IDistributedCache>();
-
-        var value = await _cacheService.GetStringAsync(idempotencyKey!);
-
-        var completedStatusIdempotentObject = value!.CompleteIdempontentString();
-
-        await _cacheService.SetStringAsync(idempotencyKey!, completedStatusIdempotentObject);
+        await HttpContext.RequestServices.GetRequiredService<IDistributedCache>()
+                         .CompleteIdempotentItemAsync(idempotencyKey!);
 
         return Ok();
     }
-
 
     [HttpGet("query/{query}")]
     [PaginationValidator]
     public async Task<ActionResult> SearchCourses(KeyPagedRequest<string> request)
     {
-        var pagedResponse = await _coursesService.SearchCoursesAsync(request);
-
-        return Ok(pagedResponse);
+        return Ok(await _coursesService.SearchCoursesAsync(request));
     }
     
     // To Be Revisioned As Temporary Solution
@@ -157,7 +152,7 @@ public class CoursesController(ICoursesService _coursesService) : ControllerBase
     }
 
     [HttpGet("{courseId}/chapters/{chaptedId}")]
-    public async Task<ActionResult> GetByChapters(string courseId)
+    public async Task<ActionResult> GetByChapters([Required]string courseId)
     {
         var chaptersList = await _coursesService.GetChaptersAsync(courseId);
 
@@ -192,22 +187,17 @@ public class CoursesController(ICoursesService _coursesService) : ControllerBase
     }
 
     [HttpGet("instructor/{instructorId}")]
-    public async Task<ActionResult> GetInstructorCourses(string instructorId)
+    [PaginationValidator]
+    public async Task<ActionResult> GetInstructorCourses(KeyPagedRequest<string> request)
     {
-        throw new NotImplementedException();
-        //var result = await _coursesService.GetEnrolledCoursesAsync(userId);
-        //if (result.IsFailure)
-        //{
-        //    return NotFound(result.Error);
-        //}
-        //return Ok(result.Value);
+        var result = await _coursesService.GetCoursesByInstructorAsync(request);
+        
+        if (!result.IsSuccess)
+        {
+            return NotFound(result.Error);
+        }
+
+        return Ok(result.Value);
     }
 
-    [HttpPost("{courseId}/chapters/{chapterId}/upload-video")]
-    [VideoFileValidator]
-    public async Task<ActionResult> UploadVideo([FromBody]ChapterVideoRequest request, [FromRoute]string chapterId, [FromRoute]string courseId)
-    {
-        var result = await _coursesService.UploadChapterVideo(request, chapterId, courseId);
-        throw new NotImplementedException();
-    }
 }

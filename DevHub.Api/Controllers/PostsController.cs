@@ -15,10 +15,8 @@ namespace DevHub.Controllers;
 
 [ApiController]
 [Route("api/v1/posts/")]
-public class PostsController(IPostService _postService,
-    ILogger<PostsController> _logger) : ControllerBase
+public class PostsController(IPostService _postService, ILogger<PostsController> _logger) : ControllerBase
 {
-
     [HttpGet("test-minimal")]
     public async Task<ActionResult<IEnumerable<MinimalPost>>> GetOne()
     {
@@ -137,7 +135,9 @@ public class PostsController(IPostService _postService,
         var result = await _postService.CreatePostAsync(request);
 
         if (result.IsSuccess)
+        {
             return CreatedAtAction(nameof(GetDetailedById), result);
+        }
 
         return BadRequest(result.Error);
     }

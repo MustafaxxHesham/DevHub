@@ -17,7 +17,7 @@ namespace DevHub.EFCore.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.12")
+                .HasAnnotation("ProductVersion", "10.0.14")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -1623,9 +1623,6 @@ namespace DevHub.EFCore.Migrations
                     b.Property<int>("RoleId")
                         .HasColumnType("int");
 
-                    b.Property<Guid?>("Wallet")
-                        .HasColumnType("uniqueidentifier");
-
                     b.HasKey("Id");
 
                     b.HasIndex("RoleId");
@@ -1659,7 +1656,7 @@ namespace DevHub.EFCore.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("UsersCourses");
+                    b.ToTable("UserCourses");
                 });
 
             modelBuilder.Entity("DevHub.Domain.Models.UserCourseTrack", b =>
@@ -1691,7 +1688,7 @@ namespace DevHub.EFCore.Migrations
 
                     b.HasIndex("VideoId");
 
-                    b.ToTable("UserCourseTrack");
+                    b.ToTable("UserCourseTracks");
                 });
 
             modelBuilder.Entity("DevHub.Domain.Models.UserFollower", b =>
@@ -1771,6 +1768,9 @@ namespace DevHub.EFCore.Migrations
 
                     b.Property<double>("Balance")
                         .HasColumnType("float");
+
+                    b.Property<DateTime>("IssuedAt")
+                        .HasColumnType("datetime2");
 
                     b.Property<int>("UserId")
                         .HasColumnType("int");
@@ -2224,7 +2224,7 @@ namespace DevHub.EFCore.Migrations
             modelBuilder.Entity("DevHub.Domain.Models.Wallet", b =>
                 {
                     b.HasOne("DevHub.Domain.Models.User", "User")
-                        .WithOne("WalletId")
+                        .WithOne("Wallet")
                         .HasForeignKey("DevHub.Domain.Models.Wallet", "UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -2330,7 +2330,7 @@ namespace DevHub.EFCore.Migrations
 
                     b.Navigation("UserSubscriptions");
 
-                    b.Navigation("WalletId");
+                    b.Navigation("Wallet");
 
                     b.Navigation("WishLists");
                 });

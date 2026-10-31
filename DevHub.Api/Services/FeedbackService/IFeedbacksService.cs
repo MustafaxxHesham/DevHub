@@ -5,6 +5,7 @@ using DevHub.Utilities;
 namespace DevHub.Services.FeedbackService;
 public interface IFeedbacksService
 {
+    Task<Result<FeedbackResponse>> GetFeedbackByIdAsync(string feedbackId);
     Task<SimpleResult<int>> CreateFeedback(CreateFeedbackRequest request);
     Task<SimpleResult<bool>> EditFeedback(EditFeedbackRequest request);
     Task<Result<PagedResponse<FeedbackResponse>>> GetFeedbackForCourse(KeyPagedRequest<string> request);
